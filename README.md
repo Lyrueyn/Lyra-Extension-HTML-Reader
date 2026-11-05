@@ -45,3 +45,9 @@ GNU GPL v3.0。
 ## 1.1.2
 
 - 编辑器 iframe 缓存版本更新到 140；图片 data URL 写入 HTML。
+
+## 1.2.0
+
+- 图片改为保存到 HTML 同目录 `assets/`，源码写相对路径，不再使用 base64。
+- 阅读/编辑预览通过 `bookAssetsOrigin` 加载本地相对图片。
+- 需要主程序 1.4.1+。

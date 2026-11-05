@@ -4,6 +4,7 @@
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
   const params = new URLSearchParams(location.search);
   const editorOrigin = params.get("extensionsOrigin") || "https://lyra-extensions.local";
+  const bookAssetsOrigin = params.get("bookAssetsOrigin") || "";
   const isFilePreview = location.protocol === "file:";
   const EDIT_CHANNEL = "lyra-editor";
 
@@ -72,10 +73,18 @@
     });
   }
 
+  function withBookBase(html) {
+    if (!bookAssetsOrigin) return html;
+    const origin = bookAssetsOrigin.replace(/\/?$/, "/");
+    const base = '<base href="' + origin.replace(/"/g, "&quot;") + '">';
+    if (/<head[\s>]/i.test(html)) return html.replace(/<head([^>]*)>/i, "<head$1>" + base);
+    if (/<html[\s>]/i.test(html)) return html.replace(/<html([^>]*)>/i, "<html$1><head>" + base + "</head>");
+    return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + base + "</head><body>" + html + "</body></html>";
+  }
   function wrapRead(html) {
     const value = String(html || "");
-    if (/<html[\s>]/i.test(value)) return value;
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${value}</body></html>`;
+    if (/<html[\s>]/i.test(value)) return withBookBase(value);
+    return withBookBase("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>" + value + "</body></html>");
   }
   function renderRead() {
     $("readFrame").srcdoc = wrapRead(state.html || "<p style='color:#888'>空 HTML 文件</p>");
@@ -83,7 +92,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=140&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=150&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -94,7 +103,7 @@
     frame.contentWindow.postMessage(Object.assign({ channel: EDIT_CHANNEL, type: type }, extra || {}), editorTargetOrigin());
   }
   function sendEditorDocument() {
-    sendEditor(state.editorInited ? "set-document" : "init", { html: state.html, title: state.title, assetMode: "inline" });
+    sendEditor(state.editorInited ? "set-document" : "init", { html: state.html, title: state.title, assetMode: "external", baseHref: bookAssetsOrigin });
     state.editorInited = true;
   }
   function ensureEditor() {
@@ -171,11 +180,32 @@
     }
   }
 
+  async function saveReaderAsset(request) {
+    try {
+      const safeName = String(request.name || "image").replace(/[^\w.\-]+/g, "_").slice(-80) || "image";
+      const dot = safeName.lastIndexOf(".");
+      const ext = dot >= 0 ? safeName.slice(dot) : ".png";
+      const stem = (dot >= 0 ? safeName.slice(0, dot) : safeName) || "image";
+      const path = "assets/" + Date.now().toString(36) + "-" + stem + ext;
+      const res = await hostCall("host.file.save", { path: path, data: request.data || "" });
+      if (!res || !res.ok) throw new Error((res && res.error) || "保存图片失败");
+      sendEditor("asset-result", { requestId: request.requestId, ok: true, path: res.path || path });
+      setStatus("已插入图片", "ok");
+    } catch (e) {
+      sendEditor("asset-result", { requestId: request.requestId, ok: false, error: String(e && e.message ? e.message : e) });
+      setStatus("图片保存失败", "error");
+    }
+  }
+
   window.addEventListener("message", (event) => {
     const frame = $("editFrame");
     if (!frame || event.source !== frame.contentWindow) return;
     const d = event.data || {};
     if (d.channel !== EDIT_CHANNEL) return;
+    if (d.type === "asset-request") {
+      saveReaderAsset(d);
+      return;
+    }
     if (d.type === "ready") {
       state.editorReady = true;
       if (!state.editorInited) sendEditorDocument();
