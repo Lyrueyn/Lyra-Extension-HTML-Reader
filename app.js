@@ -72,21 +72,10 @@
     });
   }
 
-  const BASE_CSS = `
-    html { min-height: 100%; }
-    body { margin: 0; padding: 24px; background: #fff; color: #1f2937;
-      font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; line-height: 1.65; }
-    img, video, canvas, svg { max-width: 100%; min-width: 0; height: auto; }
-    pre { white-space: pre-wrap; word-break: break-word; }
-    a { color: #138fc9; }
-  `;
   function wrapRead(html) {
-    const style = `<style data-lyra-reader>${BASE_CSS}</style>`;
-    if (/<html[\s>]/i.test(html)) {
-      if (/<head[\s>]/i.test(html)) return html.replace(/<head([^>]*)>/i, `<head$1>${style}`);
-      return html.replace(/<html([^>]*)>/i, `<html$1><head>${style}</head>`);
-    }
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8">${style}</head><body>${html}</body></html>`;
+    const value = String(html || "");
+    if (/<html[\s>]/i.test(value)) return value;
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${value}</body></html>`;
   }
   function renderRead() {
     $("readFrame").srcdoc = wrapRead(state.html || "<p style='color:#888'>空 HTML 文件</p>");

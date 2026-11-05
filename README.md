@@ -32,3 +32,8 @@ https://lyra-extensions.local/html-editor/index.html?embedded=1
 ## 许可证
 
 GNU GPL v3.0。
+
+## 1.1.0
+
+- 阅读模式不再注入 padding / 字体 / 背景，完整 HTML 按原样渲染；`body` 的 `color`、`width` 等属性保留。
+- 只有没有 `<html>` 的片段才套最小外壳。
