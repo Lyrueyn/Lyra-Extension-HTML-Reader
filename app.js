@@ -166,15 +166,18 @@
 
   function collectLocalMediaRefs(html) {
     const refs = new Set();
-    String(html || '').replace(/\b(?:src|poster)\s*=\s*(["'])([^"']+)\1/gi, (m, q, url) => { refs.add(url); return m; });
-    String(html || '').replace(/url\(\s*(["']?)([^)'"]+)\1\s*\)/gi, (m, q, url) => { refs.add(url); return m; });
-    String(html || '').replace(/\bsrcset\s*=\s*(["'])([^"']+)\1/gi, (m, q, value) => {
-      value.split(',').forEach((part) => {
-        const url = part.trim().split(/\s+/)[0];
-        if (url) refs.add(url);
+    String(html || '').replace(/<(img|video|audio|source|track)\b[^>]*>/gi, (tag) => {
+      tag.replace(/\b(?:src|poster)\s*=\s*(["'])([^"']+)\1/gi, (m, q, url) => { refs.add(url); return m; });
+      tag.replace(/\bsrcset\s*=\s*(["'])([^"']+)\1/gi, (m, q, value) => {
+        value.split(',').forEach((part) => {
+          const url = part.trim().split(/\s+/)[0];
+          if (url) refs.add(url);
+        });
+        return m;
       });
-      return m;
+      return tag;
     });
+    String(html || '').replace(/url\(\s*(["']?)([^)'"]+)\1\s*\)/gi, (m, q, url) => { refs.add(url); return m; });
     return refs;
   }
   function localMediaSkipped(url) {

@@ -64,3 +64,8 @@ GNU GPL v3.0。
 
 - readFrame/editFrame 增加 allow="autoplay"，编辑模式背景视频恢复显示。
 - 迁移失败状态显示首个失败路径和原因。
+
+## 1.3.2
+
+- 修复误把 `<script src>` 当媒体迁移：现在只扫描 img/video/audio/source/track 的 src/poster/srcset，以及 CSS url()。
+- class 2.html 里的 `../../../preview.js` 不再被上报为迁移失败。
