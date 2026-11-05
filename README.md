@@ -37,3 +37,7 @@ GNU GPL v3.0。
 
 - 阅读模式不再注入 padding / 字体 / 背景，完整 HTML 按原样渲染；`body` 的 `color`、`width` 等属性保留。
 - 只有没有 `<html>` 的片段才套最小外壳。
+
+## 1.1.1
+
+- 编辑器 iframe 增加版本 query；图片以 data URL 插入并随 HTML 保存。

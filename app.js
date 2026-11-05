@@ -83,7 +83,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=132&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -94,7 +94,7 @@
     frame.contentWindow.postMessage(Object.assign({ channel: EDIT_CHANNEL, type: type }, extra || {}), editorTargetOrigin());
   }
   function sendEditorDocument() {
-    sendEditor(state.editorInited ? "set-document" : "init", { html: state.html, title: state.title });
+    sendEditor(state.editorInited ? "set-document" : "init", { html: state.html, title: state.title, assetMode: "inline" });
     state.editorInited = true;
   }
   function ensureEditor() {
