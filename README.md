@@ -51,3 +51,11 @@ GNU GPL v3.0。
 - 图片改为保存到 HTML 同目录 `assets/`，源码写相对路径，不再使用 base64。
 - 阅读/编辑预览通过 `bookAssetsOrigin` 加载本地相对图片。
 - 需要主程序 1.4.1+。
+
+
+## 1.3.0
+
+- 打开 HTML 时自动把图片/视频/音频等本地媒体迁移到同目录 `assets/`，支持相对路径与绝对路径。
+- 扫描 `src`、`poster`、`srcset`、CSS `url(...)`；迁移后重写源码并自动保存（.bak 备份）。
+- data:/http:/blob:/已有 assets/ 路径跳过。
+- 需要主程序 1.4.3+（host.file.import）。

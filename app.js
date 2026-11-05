@@ -164,6 +164,56 @@
     }
   }
 
+  function collectLocalMediaRefs(html) {
+    const refs = new Set();
+    String(html || '').replace(/\b(?:src|poster)\s*=\s*(["'])([^"']+)\1/gi, (m, q, url) => { refs.add(url); return m; });
+    String(html || '').replace(/url\(\s*(["']?)([^)'"]+)\1\s*\)/gi, (m, q, url) => { refs.add(url); return m; });
+    String(html || '').replace(/\bsrcset\s*=\s*(["'])([^"']+)\1/gi, (m, q, value) => {
+      value.split(',').forEach((part) => {
+        const url = part.trim().split(/\s+/)[0];
+        if (url) refs.add(url);
+      });
+      return m;
+    });
+    return refs;
+  }
+  function localMediaSkipped(url) {
+    const value = String(url || '').trim();
+    if (!value) return true;
+    if (/^(data:|blob:|https?:|\/\/|#|mailto:|javascript:|tel:|about:)/i.test(value)) return true;
+    if (/^assets\//i.test(value)) return true;
+    if (value.includes('{{') || value.includes('}}')) return true;
+    return false;
+  }
+  async function migrateLocalAssets() {
+    if (!host || isFilePreview) return;
+    const refs = collectLocalMediaRefs(state.html);
+    let migrated = 0;
+    const failed = [];
+    for (const ref of refs) {
+      if (localMediaSkipped(ref)) continue;
+      try {
+        const res = await hostCall("host.file.import", { path: ref });
+        if (res && res.ok && res.path) {
+          state.html = String(state.html).split(ref).join(res.path);
+          migrated += 1;
+        } else {
+          failed.push(ref);
+        }
+      } catch {
+        failed.push(ref);
+      }
+    }
+    if (migrated > 0) {
+      await hostCall("host.workspace.save", { data: encodeText(state.html) });
+      state.dirty = false;
+      setStatus("已迁移 " + migrated + " 个媒体到 assets/", "ok");
+    } else if (failed.length) {
+      setStatus("有 " + failed.length + " 个本地媒体未能迁移", "error");
+    }
+    return migrated;
+  }
+
   async function init() {
     $("fileName").textContent = state.title;
     $("filePath").textContent = params.get("name") || "";
@@ -178,6 +228,8 @@
       }
       renderRead();
       setStatus("已加载", "ok");
+      const migrated = await migrateLocalAssets();
+      if (migrated > 0) renderRead();
       if (host) host.postMessage({ type: "host.ready" });
       $("filePath").textContent = state.path || params.get("name") || "";
     } catch (e) {
