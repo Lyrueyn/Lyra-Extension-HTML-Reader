@@ -177,6 +177,17 @@
       });
       return tag;
     });
+      String(html || '').replace(/<link\b[^>]*>/gi, (tag) => {
+        const href = (tag.match(/\bhref\s*=\s*(["'])([^"']+)\1/i) || [])[2];
+        const rel = (tag.match(/\brel\s*=\s*(["'])([^"']+)\1/i) || [])[2] || "";
+        if (href && (!rel || /stylesheet|icon|preload|modulepreload/i.test(rel))) refs.add(href);
+        return tag;
+      });
+      String(html || '').replace(/<script\b[^>]*>/gi, (tag) => {
+        const src = (tag.match(/\bsrc\s*=\s*(["'])([^"']+)\1/i) || [])[2];
+        if (src) refs.add(src);
+        return tag;
+      });
     String(html || '').replace(/url\(\s*(["']?)([^)'"]+)\1\s*\)/gi, (m, q, url) => { refs.add(url); return m; });
     return refs;
   }

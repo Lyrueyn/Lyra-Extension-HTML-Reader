@@ -86,3 +86,10 @@ GNU GPL v3.0。
 
 - 嵌入编辑器缓存版本 281（Editor 1.17.2，含 Console 标签）。
 - 需要主程序 1.4.6+。
+
+## 1.3.6
+
+- 迁移范围增加 `<link rel="stylesheet">` 与 `<script src>`：本地 CSS/JS/fonts 也复制到 assets 并改写路径。
+- 主程序 1.4.7 放宽 host.file.import 扩展名。
+
+- 1.3.6 迁移 `<link rel="stylesheet">` 与 `<script src>`；主程序 1.4.7 放开扩展名。
