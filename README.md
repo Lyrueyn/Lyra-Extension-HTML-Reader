@@ -41,3 +41,7 @@ GNU GPL v3.0。
 ## 1.1.1
 
 - 编辑器 iframe 增加版本 query；图片以 data URL 插入并随 HTML 保存。
+
+## 1.1.2
+
+- 编辑器 iframe 缓存版本更新到 140；图片 data URL 写入 HTML。
