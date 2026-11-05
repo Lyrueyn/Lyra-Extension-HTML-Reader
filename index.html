@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML 阅读器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="brand">
+        <span class="logo">HTML</span>
+        <div class="titles">
+          <div id="fileName" class="file-name">未命名.html</div>
+          <div id="filePath" class="file-path"></div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="mode-switch">
+          <button id="readModeBtn" class="mode active" type="button">阅读</button>
+          <button id="editModeBtn" class="mode" type="button">编辑</button>
+        </div>
+        <span id="status" class="status">就绪</span>
+        <button id="saveBtn" class="ghost" type="button">保存</button>
+      </div>
+    </header>
+    <main class="content">
+      <iframe id="readFrame" class="frame" title="HTML 阅读" sandbox="allow-same-origin allow-scripts allow-forms allow-modals"></iframe>
+      <iframe id="editFrame" class="frame editor-frame" title="HTML 编辑器" hidden></iframe>
+    </main>
+  </div>
+  <div id="errorMask" class="error-mask" hidden>
+    <div class="error-card">
+      <h3>HTML 阅读器无法打开</h3>
+      <p id="errorText"></p>
+      <button id="errorClose" type="button" class="ghost">关闭</button>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

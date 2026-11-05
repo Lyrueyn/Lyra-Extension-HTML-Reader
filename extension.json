@@ -1,0 +1,28 @@
+{
+  "id": "html-reader",
+  "name": "HTML 阅读器",
+  "version": "1.0.0",
+  "entry": "index.html",
+  "description": "HTML 阅读器：打开 .html/.htm 文件，默认阅读模式，可切换到嵌入的 HTML 编辑器层。",
+  "kind": "reader",
+  "fileTypes": [".html", ".htm"],
+  "requires": ["html-editor"],
+  "host": {
+    "innerName": "document.html",
+    "fileParam": "file",
+    "keepMtime": true
+  },
+  "library": {
+    "sidebar": true,
+    "navLabel": "HTML",
+    "glyph": "\uE8A5",
+    "title": "HTML 阅读",
+    "description": "打开本地 HTML 文件；阅读模式可切换到编辑器层，保存写回原文件。",
+    "openLabel": "打开 HTML 文件",
+    "addLabel": "＋ 添加 HTML 文件",
+    "authorFallback": "本地 HTML",
+    "cover": "none",
+    "order": 35,
+    "metadata": ""
+  }
+}
