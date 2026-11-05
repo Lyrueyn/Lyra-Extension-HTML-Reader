@@ -74,9 +74,14 @@
   }
 
   function withBookBase(html) {
-    if (!bookAssetsOrigin) return html;
+    const imageCss = '<style>img, video, canvas, svg { max-width: 100%; min-width: 0; height: auto; }</style>';
+    if (!bookAssetsOrigin) {
+      if (/<head[\s>]/i.test(html)) return html.replace(/<head([^>]*)>/i, "<head$1>" + imageCss);
+      if (/<html[\s>]/i.test(html)) return html.replace(/<html([^>]*)>/i, "<html$1><head>" + imageCss + "</head>");
+      return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + imageCss + "</head><body>" + html + "</body></html>";
+    }
     const origin = bookAssetsOrigin.replace(/\/?$/, "/");
-    const base = '<base href="' + origin.replace(/"/g, "&quot;") + '">';
+    const base = '<base href="' + origin.replace(/"/g, "&quot;") + '">' + imageCss;
     if (/<head[\s>]/i.test(html)) return html.replace(/<head([^>]*)>/i, "<head$1>" + base);
     if (/<html[\s>]/i.test(html)) return html.replace(/<html([^>]*)>/i, "<html$1><head>" + base + "</head>");
     return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + base + "</head><body>" + html + "</body></html>";
@@ -92,7 +97,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=250&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=260&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
