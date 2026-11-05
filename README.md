@@ -93,3 +93,7 @@ GNU GPL v3.0。
 - 主程序 1.4.7 放宽 host.file.import 扩展名。
 
 - 1.3.6 迁移 `<link rel="stylesheet">` 与 `<script src>`；主程序 1.4.7 放开扩展名。
+
+## 1.3.7
+
+- 编辑器缓存 282（Editor 1.17.3 自定义 selector）。
