@@ -97,7 +97,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=270&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=280&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -198,10 +198,10 @@
           state.html = String(state.html).split(ref).join(res.path);
           migrated += 1;
         } else {
-          failed.push(ref);
+          failed.push(ref + "（" + ((res && res.error) || "导入失败") + "）");
         }
-      } catch {
-        failed.push(ref);
+      } catch (e) {
+        failed.push(ref + "（" + String((e && e.message) || e) + "）");
       }
     }
     if (migrated > 0) {
@@ -209,7 +209,7 @@
       state.dirty = false;
       setStatus("已迁移 " + migrated + " 个媒体到 assets/", "ok");
     } else if (failed.length) {
-      setStatus("有 " + failed.length + " 个本地媒体未能迁移", "error");
+      setStatus("有 " + failed.length + " 个本地媒体未能迁移：" + failed[0], "error");
     }
     return migrated;
   }

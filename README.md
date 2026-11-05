@@ -59,3 +59,8 @@ GNU GPL v3.0。
 - 扫描 `src`、`poster`、`srcset`、CSS `url(...)`；迁移后重写源码并自动保存（.bak 备份）。
 - data:/http:/blob:/已有 assets/ 路径跳过。
 - 需要主程序 1.4.3+（host.file.import）。
+
+## 1.3.1
+
+- readFrame/editFrame 增加 allow="autoplay"，编辑模式背景视频恢复显示。
+- 迁移失败状态显示首个失败路径和原因。

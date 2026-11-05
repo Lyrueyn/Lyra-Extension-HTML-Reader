@@ -1,7 +1,7 @@
 ﻿{
   "id": "html-reader",
   "name": "HTML 阅读器",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "entry": "index.html",
   "description": "HTML 阅读器：打开 .html/.htm 文件，默认阅读模式，可切换到嵌入的 HTML 编辑器层。",
   "kind": "reader",
