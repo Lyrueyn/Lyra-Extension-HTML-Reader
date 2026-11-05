@@ -158,6 +158,7 @@
       if (state.editorInited) sendEditorDocument();
       setStatus("编辑模式");
     } else {
+        renderToc();
       renderRead();
       saveNow().catch(() => {});
       setStatus("阅读模式");
@@ -228,6 +229,59 @@
     return migrated;
   }
 
+    function collectToc() {
+      try {
+        const doc = new DOMParser().parseFromString(String(state.html || ""), "text/html");
+        return Array.from(doc.querySelectorAll("h1,h2,h3,h4,h5,h6"))
+          .map((el) => ({ level: Number(el.tagName.slice(1)) || 1, text: (el.textContent || "").replace(/\s+/g, " ").trim() }))
+          .filter((item) => item.text);
+      } catch { return []; }
+    }
+    function renderToc() {
+      state.headings = collectToc();
+      const panel = $("tocPanel");
+      const list = $("tocList");
+      const btn = $("tocBtn");
+      if (!panel || !list || !btn) return;
+      btn.hidden = state.headings.length === 0;
+      btn.textContent = "目录" + (state.headings.length ? " " + state.headings.length : "");
+      list.innerHTML = "";
+      if (!state.headings.length) {
+        const empty = document.createElement("div");
+        empty.className = "toc-empty";
+        empty.textContent = "没有标题";
+        list.appendChild(empty);
+        return;
+      }
+      state.headings.forEach((item, index) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "toc-item";
+        row.textContent = item.text;
+        row.style.paddingLeft = 7 + (item.level - 1) * 12 + "px";
+        row.title = item.text;
+        row.addEventListener("click", () => jumpToHeading(index));
+        list.appendChild(row);
+      });
+    }
+    function jumpToHeading(index) {
+      if (state.mode !== "read") setMode("read");
+      setTimeout(() => {
+        try {
+          const doc = $("readFrame").contentDocument;
+          const nodes = doc ? doc.querySelectorAll("h1,h2,h3,h4,h5,h6") : [];
+          if (nodes[index]) nodes[index].scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch { }
+      }, state.mode === "read" ? 40 : 280);
+    }
+    $("tocBtn").addEventListener("click", () => {
+      const panel = $("tocPanel");
+      if (!panel) return;
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden) renderToc();
+    });
+    $("tocCloseBtn").addEventListener("click", () => { $("tocPanel").hidden = true; });
+
   async function init() {
     $("fileName").textContent = state.title;
     $("filePath").textContent = params.get("name") || "";
@@ -240,6 +294,7 @@
       if (!state.html.trim()) {
         state.html = "<h1>" + state.title.replace(/[<>&]/g, "") + "</h1>\n<p>这是一个空 HTML 文件，点击右上角“编辑”开始写。</p>";
       }
+        renderToc();
       renderRead();
       setStatus("已加载", "ok");
       const migrated = await migrateLocalAssets();
@@ -286,6 +341,7 @@
     } else if (d.type === "change") {
       state.html = d.html || "";
       markDirty();
+          renderToc();
     }
   });
 

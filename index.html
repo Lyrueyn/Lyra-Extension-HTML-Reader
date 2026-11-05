@@ -22,12 +22,17 @@
           <button id="editModeBtn" class="mode" type="button">编辑</button>
         </div>
         <span id="status" class="status">就绪</span>
+          <button id="tocBtn" class="ghost" type="button" hidden>目录</button>
         <button id="saveBtn" class="ghost" type="button">保存</button>
       </div>
     </header>
     <main class="content">
       <iframe id="readFrame" class="frame" title="HTML 阅读" allow="autoplay" sandbox="allow-same-origin allow-scripts allow-forms allow-modals"></iframe>
       <iframe id="editFrame" class="frame editor-frame" title="HTML 编辑器" allow="autoplay" hidden></iframe>
+        <aside id="tocPanel" class="toc-panel" hidden>
+          <div class="toc-head"><span id="tocTitle">目录</span><button id="tocCloseBtn" class="toc-close" type="button" title="关闭">×</button></div>
+          <div id="tocList" class="toc-list"></div>
+        </aside>
     </main>
   </div>
   <div id="errorMask" class="error-mask" hidden>

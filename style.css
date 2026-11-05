@@ -76,3 +76,54 @@ button.ghost:hover { border-color: var(--accent); color: var(--accent-deep); }
 .error-card { width: min(520px, 90vw); padding: 20px; border-radius: 12px; background: #fff; box-shadow: 0 12px 40px rgba(0, 0, 0, .25); }
 .error-card h3 { margin: 0 0 8px; font-size: 15px; }
 .error-card p { margin: 0 0 16px; font-size: 12px; color: #b91c1c; white-space: pre-wrap; }
+
+
+/* Table of contents */
+.toc-panel {
+  position: absolute;
+  z-index: 20;
+  right: 16px;
+  top: 14px;
+  width: min(300px, 72vw);
+  max-height: min(70vh, 620px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, .97);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 34px rgba(15, 35, 60, .22);
+  overflow: hidden;
+}
+.toc-panel[hidden] { display: none; }
+.toc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  background: #f2f8ff;
+}
+.toc-close { border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.toc-close:hover { color: var(--text); }
+.toc-list { overflow: auto; padding: 6px; }
+.toc-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 4px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toc-item:hover { background: #eaf5fc; color: var(--accent-deep); }
+.toc-empty { color: var(--muted); font-size: 11px; padding: 10px; }
