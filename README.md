@@ -69,3 +69,8 @@ GNU GPL v3.0。
 
 - 修复误把 `<script src>` 当媒体迁移：现在只扫描 img/video/audio/source/track 的 src/poster/srcset，以及 CSS url()。
 - class 2.html 里的 `../../../preview.js` 不再被上报为迁移失败。
+
+## 1.3.3
+
+- 书库「添加 HTML 文件」改为链接式入库，不复制 HTML 副本；相对 assets 始终按原文件目录解析。
+- 需要主程序 1.4.4+（library.link）。
