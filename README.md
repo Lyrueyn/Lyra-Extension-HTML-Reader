@@ -126,3 +126,8 @@ GNU GPL v3.0。
 ## 1.3.14
 
 - 编辑器缓存 286（Editor 1.17.7 查找/替换）。
+
+## 1.3.15
+
+- 编辑器 file-request 桥接：embedded Editor 的 host.file.rename/delete/save 经 Reader 转到宿主。
+- 编辑器缓存 287。

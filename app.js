@@ -134,7 +134,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=286&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=287&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -461,6 +461,23 @@
     }
   }
 
+  async function handleEditorFileRequest(request) {
+    const command = String(request.command || "");
+    const extra = Object.assign({}, request);
+    delete extra.requestId; delete extra.type; delete extra.channel; delete extra.command;
+    try {
+      const res = await hostCall(command, extra);
+      sendEditor("file-result", {
+        requestId: request.requestId,
+        ok: !!(res && res.ok),
+        error: (res && res.error) || "",
+        path: (res && res.path) || "",
+      });
+    } catch (e) {
+      sendEditor("file-result", { requestId: request.requestId, ok: false, error: String(e && e.message ? e.message : e) });
+    }
+  }
+
   async function saveReaderAsset(request) {
     try {
       const safeName = String(request.name || "image").replace(/[^\w.\-]+/g, "_").slice(-80) || "image";
@@ -483,6 +500,7 @@
     if (!frame || event.source !== frame.contentWindow) return;
     const d = event.data || {};
     if (d.channel !== EDIT_CHANNEL) return;
+    if (d.type === "file-request") { handleEditorFileRequest(d); return; }
     if (d.type === "asset-request") {
       saveReaderAsset(d);
       return;
