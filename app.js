@@ -92,7 +92,41 @@
     return withBookBase("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>" + value + "</body></html>");
   }
   function renderRead() {
-    $("readFrame").srcdoc = wrapRead(state.html || "<p style='color:#888'>空 HTML 文件</p>");
+    const frame = $("readFrame");
+    frame.srcdoc = wrapRead(state.html || "<p style='color:#888'>空 HTML 文件</p>");
+    frame.onload = () => { bindTocScroll(); };
+  }
+  function scheduleTocActive() {
+    clearTimeout(state.tocScrollTimer);
+    state.tocScrollTimer = setTimeout(updateTocActive, 50);
+  }
+  function bindTocScroll() {
+    try {
+      const win = $("readFrame").contentWindow;
+      if (!win) return;
+      win.removeEventListener("scroll", scheduleTocActive);
+      win.addEventListener("scroll", scheduleTocActive, { passive: true });
+      updateTocActive();
+    } catch { }
+  }
+  function updateTocActive() {
+    const panel = $("tocPanel");
+    const items = Array.from(document.querySelectorAll(".toc-item"));
+    if (!items.length) return;
+    try {
+      const win = $("readFrame").contentWindow;
+      const doc = $("readFrame").contentDocument;
+      if (!win || !doc) return;
+      const headings = Array.from(doc.querySelectorAll("h1,h2,h3,h4,h5,h6"));
+      if (!headings.length) return;
+      const threshold = Math.max(80, (win.innerHeight || 700) * 0.24);
+      let active = 0;
+      headings.forEach((heading, index) => {
+        if (heading.getBoundingClientRect().top <= threshold) active = index;
+      });
+      items.forEach((item, index) => item.classList.toggle("active", index === active));
+      if (panel && !panel.hidden && items[active]) items[active].scrollIntoView({ block: "nearest" });
+    } catch { }
   }
 
   function editorUrl() {
@@ -153,6 +187,8 @@
     $("editModeBtn").classList.toggle("active", editing);
     $("readFrame").hidden = editing;
     $("editFrame").hidden = !editing;
+      const toc = $("tocPanel");
+      if (toc) toc.hidden = true;
     if (editing) {
       ensureEditor();
       if (state.editorInited) sendEditorDocument();

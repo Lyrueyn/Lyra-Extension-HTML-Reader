@@ -126,4 +126,5 @@ button.ghost:hover { border-color: var(--accent); color: var(--accent-deep); }
   text-overflow: ellipsis;
 }
 .toc-item:hover { background: #eaf5fc; color: var(--accent-deep); }
+.toc-item.active { background: #dff2fb; color: var(--accent-deep); font-weight: 600; }
 .toc-empty { color: var(--muted); font-size: 11px; padding: 10px; }
