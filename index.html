@@ -29,6 +29,14 @@
     <main class="content">
       <iframe id="readFrame" class="frame" title="HTML 阅读" allow="autoplay" sandbox="allow-same-origin allow-scripts allow-forms allow-modals"></iframe>
       <iframe id="editFrame" class="frame editor-frame" title="HTML 编辑器" allow="autoplay" hidden></iframe>
+        <div id="readProgress" class="read-progress" hidden><div id="readProgressFill"></div></div>
+        <div id="findBar" class="find-bar" hidden>
+          <input id="findInput" type="text" placeholder="页内查找…" spellcheck="false" autocomplete="off"/>
+          <span id="findCount" class="find-count">0/0</span>
+          <button id="findPrev" type="button" title="上一个">↑</button>
+          <button id="findNext" type="button" title="下一个">↓</button>
+          <button id="findClose" type="button" title="关闭">×</button>
+        </div>
         <aside id="tocPanel" class="toc-panel" hidden>
           <div class="toc-head"><span id="tocTitle">目录</span><button id="tocCloseBtn" class="toc-close" type="button" title="关闭">×</button></div>
           <div id="tocList" class="toc-list"></div>

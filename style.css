@@ -128,3 +128,31 @@ button.ghost:hover { border-color: var(--accent); color: var(--accent-deep); }
 .toc-item:hover { background: #eaf5fc; color: var(--accent-deep); }
 .toc-item.active { background: #dff2fb; color: var(--accent-deep); font-weight: 600; }
 .toc-empty { color: var(--muted); font-size: 11px; padding: 10px; }
+
+
+/* Reading progress + in-page find */
+.read-progress { position: absolute; z-index: 15; top: 0; left: 0; right: 0; height: 3px; background: rgba(19, 143, 201, .12); pointer-events: none; }
+.read-progress[hidden] { display: none; }
+#readProgressFill { height: 100%; width: 0; background: linear-gradient(90deg, #66ccff, #138fc9); transition: width .08s linear; }
+.find-bar {
+  position: absolute;
+  z-index: 30;
+  top: 10px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 8px 24px rgba(15, 35, 60, .20);
+}
+.find-bar[hidden] { display: none; }
+#findInput { width: 180px; border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; font-size: 12px; outline: none; color: var(--text); background: #fff; }
+#findInput:focus { border-color: var(--accent); }
+.find-count { min-width: 44px; text-align: center; color: var(--muted); font: 10px Consolas, monospace; }
+.find-bar button { border: 1px solid var(--line); background: #fff; color: var(--text); border-radius: 5px; width: 24px; height: 24px; padding: 0; font-size: 13px; cursor: pointer; }
+.find-bar button:hover { border-color: var(--accent); color: var(--accent-deep); }
+mark.lyra-find-mark { background: #ffe58a; color: inherit; border-radius: 2px; padding: 0 1px; }
+mark.lyra-find-mark.current { background: #ff9d2e; color: #2b1600; }

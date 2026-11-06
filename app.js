@@ -94,9 +94,10 @@
   function renderRead() {
     const frame = $("readFrame");
     frame.srcdoc = wrapRead(state.html || "<p style='color:#888'>空 HTML 文件</p>");
-    frame.onload = () => { bindTocScroll(); };
+    frame.onload = () => { bindTocScroll(); updateReadProgress(); };
   }
   function scheduleTocActive() {
+    updateReadProgress();
     clearTimeout(state.tocScrollTimer);
     state.tocScrollTimer = setTimeout(updateTocActive, 50);
   }
@@ -107,6 +108,7 @@
       win.removeEventListener("scroll", scheduleTocActive);
       win.addEventListener("scroll", scheduleTocActive, { passive: true });
       updateTocActive();
+      updateReadProgress();
     } catch { }
   }
   function updateTocActive() {
@@ -125,6 +127,7 @@
         if (heading.getBoundingClientRect().top <= threshold) active = index;
       });
       items.forEach((item, index) => item.classList.toggle("active", index === active));
+      updateReadProgress();
       if (panel && !panel.hidden && items[active]) items[active].scrollIntoView({ block: "nearest" });
     } catch { }
   }
@@ -187,6 +190,7 @@
     $("editModeBtn").classList.toggle("active", editing);
     $("readFrame").hidden = editing;
     $("editFrame").hidden = !editing;
+      if ($("readProgress")) $("readProgress").hidden = editing;
       const toc = $("tocPanel");
       if (toc) toc.hidden = true;
     if (editing) {
@@ -318,6 +322,121 @@
     });
     $("tocCloseBtn").addEventListener("click", () => { $("tocPanel").hidden = true; });
 
+  function clearFindMarks() {
+    try {
+      const doc = $("readFrame").contentDocument;
+      if (!doc) return;
+      const marks = Array.from(doc.querySelectorAll("mark.lyra-find-mark"));
+      const parents = new Set();
+      marks.forEach((mark) => {
+        const parent = mark.parentNode;
+        if (!parent) return;
+        parents.add(parent);
+        parent.replaceChild(doc.createTextNode(mark.textContent || ""), mark);
+      });
+      parents.forEach((parent) => parent.normalize());
+    } catch { }
+  }
+  function openFindBar() {
+    const bar = $("findBar");
+    if (!bar) return;
+    bar.hidden = false;
+    const input = $("findInput");
+    input.focus();
+    input.select();
+  }
+  function closeFindBar() {
+    const bar = $("findBar");
+    if (bar) bar.hidden = true;
+    clearFindMarks();
+    state.findMarks = [];
+    state.findIndex = -1;
+  }
+  function updateFindCount() {
+    const count = $("findCount");
+    if (!count) return;
+    const total = (state.findMarks || []).length;
+    count.textContent = total ? (state.findIndex + 1) + "/" + total : "0/0";
+  }
+  function selectFindMark(index) {
+    const marks = state.findMarks || [];
+    if (!marks.length) { updateFindCount(); return; }
+    state.findIndex = (index + marks.length) % marks.length;
+    marks.forEach((mark, i) => mark.classList.toggle("current", i === state.findIndex));
+    try { marks[state.findIndex].scrollIntoView({ behavior: "smooth", block: "center" }); } catch { }
+    updateFindCount();
+  }
+  function runFind(query) {
+    clearFindMarks();
+    state.findMarks = [];
+    state.findIndex = -1;
+    const value = String(query || "");
+    if (!value) { updateFindCount(); return; }
+    try {
+      const doc = $("readFrame").contentDocument;
+      if (!doc || !doc.body) { updateFindCount(); return; }
+      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node.parentNode;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          const tag = (parent.tagName || "").toLowerCase();
+          if (["script", "style", "noscript", "textarea", "input", "select", "option"].includes(tag)) return NodeFilter.FILTER_REJECT;
+          if (parent.closest && parent.closest("mark.lyra-find-mark")) return NodeFilter.FILTER_REJECT;
+          return node.nodeValue && node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        },
+      });
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      const needle = value.toLowerCase();
+      const marks = [];
+      for (const node of nodes) {
+        const text = node.nodeValue || "";
+        const lower = text.toLowerCase();
+        let at = lower.indexOf(needle);
+        if (at < 0) continue;
+        const fragment = doc.createDocumentFragment();
+        let last = 0;
+        while (at >= 0) {
+          fragment.appendChild(doc.createTextNode(text.slice(last, at)));
+          const mark = doc.createElement("mark");
+          mark.className = "lyra-find-mark";
+          mark.textContent = text.slice(at, at + value.length);
+          fragment.appendChild(mark);
+          marks.push(mark);
+          last = at + value.length;
+          at = lower.indexOf(needle, last);
+        }
+        fragment.appendChild(doc.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(fragment, node);
+      }
+      state.findMarks = marks;
+      if (marks.length) selectFindMark(0);
+      else updateFindCount();
+    } catch { updateFindCount(); }
+  }
+  function moveFind(delta) {
+    const marks = state.findMarks || [];
+    if (!marks.length) { runFind($("findInput").value || ""); return; }
+    selectFindMark(state.findIndex + delta);
+  }
+  function updateReadProgress() {
+    const bar = $("readProgress");
+    const fill = $("readProgressFill");
+    if (!bar || !fill) return;
+    if (state.mode !== "read") { bar.hidden = true; return; }
+    try {
+      const win = $("readFrame").contentWindow;
+      const doc = $("readFrame").contentDocument;
+      if (!win || !doc || !doc.documentElement) return;
+      const max = Math.max(1, (doc.documentElement.scrollHeight || 0) - (win.innerHeight || 0));
+      const y = Math.max(0, win.scrollY || 0);
+      const percent = Math.min(100, (y / max) * 100);
+      fill.style.width = percent.toFixed(2) + "%";
+      bar.hidden = false;
+      bar.title = "阅读进度 " + Math.round(percent) + "%";
+    } catch { }
+  }
+
   async function init() {
     $("fileName").textContent = state.title;
     $("filePath").textContent = params.get("name") || "";
@@ -382,6 +501,18 @@
   });
 
   $("readModeBtn").addEventListener("click", () => setMode("read"));
+  $("findInput").addEventListener("input", () => runFind($("findInput").value));
+  $("findInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); moveFind(e.shiftKey ? -1 : 1); }
+    else if (e.key === "Escape") { e.preventDefault(); closeFindBar(); }
+  });
+  $("findPrev").addEventListener("click", () => moveFind(-1));
+  $("findNext").addEventListener("click", () => moveFind(1));
+  $("findClose").addEventListener("click", closeFindBar);
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); openFindBar(); }
+    else if (e.key === "Escape" && !$("findBar").hidden) closeFindBar();
+  });
   $("editModeBtn").addEventListener("click", () => setMode("edit"));
   $("saveBtn").addEventListener("click", () => saveNow().catch(showError));
   $("errorClose").addEventListener("click", () => { $("errorMask").hidden = true; });
