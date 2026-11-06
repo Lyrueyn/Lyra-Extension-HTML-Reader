@@ -131,3 +131,7 @@ GNU GPL v3.0。
 
 - 编辑器 file-request 桥接：embedded Editor 的 host.file.rename/delete/save 经 Reader 转到宿主。
 - 编辑器缓存 287。
+
+## 1.3.16
+
+- 编辑器缓存 288（Editor 1.18.0 主题配色）。
