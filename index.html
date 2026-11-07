@@ -22,11 +22,16 @@
           <button id="editModeBtn" class="mode" type="button">编辑</button>
         </div>
         <span id="status" class="status">就绪</span>
+          <button id="projectBtn" class="ghost" type="button" hidden>项目</button>
           <button id="tocBtn" class="ghost" type="button" hidden>目录</button>
         <button id="saveBtn" class="ghost" type="button">保存</button>
       </div>
     </header>
     <main class="content">
+      <aside id="projectPanel" class="project-panel" hidden>
+        <div class="project-head"><span id="projectTitle">项目</span><button id="projectCloseBtn" class="toc-close" type="button" title="关闭">×</button></div>
+        <div id="projectList" class="project-list"></div>
+      </aside>
       <iframe id="readFrame" class="frame" title="HTML 阅读" allow="autoplay" sandbox="allow-same-origin allow-scripts allow-forms allow-modals"></iframe>
       <iframe id="editFrame" class="frame editor-frame" title="HTML 编辑器" allow="autoplay" hidden></iframe>
         <div id="readProgress" class="read-progress" hidden><div id="readProgressFill"></div></div>

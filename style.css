@@ -156,3 +156,36 @@ button.ghost:hover { border-color: var(--accent); color: var(--accent-deep); }
 .find-bar button:hover { border-color: var(--accent); color: var(--accent-deep); }
 mark.lyra-find-mark { background: #ffe58a; color: inherit; border-radius: 2px; padding: 0 1px; }
 mark.lyra-find-mark.current { background: #ff9d2e; color: #2b1600; }
+
+
+/* Project file tree */
+.project-panel {
+  position: absolute;
+  z-index: 18;
+  left: 10px;
+  top: 58px;
+  bottom: 10px;
+  width: min(320px, 56vw);
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 21, 28, .97);
+  border: 1px solid #2b4152;
+  border-radius: 9px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.4);
+  overflow: hidden;
+}
+.project-panel[hidden] { display: none; }
+.project-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 10px; border-bottom: 1px solid #2b4152; color: #dce8f4; font-size: 12px;
+}
+.project-list { flex: 1; overflow: auto; padding: 6px; }
+.project-item {
+  display: block; width: 100%; text-align: left; border: 0; background: transparent;
+  color: #b8cadb; border-radius: 5px; padding: 6px 8px; margin: 1px 0;
+  font: 11px Consolas, "Microsoft YaHei", monospace; cursor: pointer;
+}
+.project-item:hover { background: #1b2d3d; color: #fff; }
+.project-item.active { background: #24506d; color: #fff; }
+.project-item .project-dir { color: #6f8ba3; margin-right: 5px; }
+.project-empty { color: #7f96aa; font-size: 11px; padding: 10px; }

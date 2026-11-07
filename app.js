@@ -18,6 +18,13 @@
     editorInited: false,
     saveTimer: 0,
     requestId: 1,
+      projectMode: params.get("project") === "1",
+      projectName: params.get("projectName") || "",
+      projectFiles: [],
+      projectRoot: "",
+      currentRel: "",
+      currentDir: "",
+      baseHref: bookAssetsOrigin ? bookAssetsOrigin.replace(/\/?$/, "/") : "",
   };
 
   const $ = (id) => document.getElementById(id);
@@ -134,7 +141,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=289&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=290&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -172,7 +179,9 @@
     clearTimeout(state.saveTimer);
     if (!state.dirty) return;
     try {
-      const res = await hostCall("host.workspace.save", { data: encodeText(state.html) });
+      const payload = { data: encodeText(state.html) };
+      if (state.projectMode && state.currentRel) payload.path = state.currentRel;
+      const res = await hostCall("host.workspace.save", payload);
       if (!res || !res.ok) throw new Error((res && res.error) || "保存失败");
       state.dirty = false;
       setStatus("已保存", "ok");
@@ -437,8 +446,75 @@
     } catch { }
   }
 
-  async function init() {
-    $("fileName").textContent = state.title;
+function renderProjectList() {
+  const list = $("projectList");
+  if (!list) return;
+  list.innerHTML = "";
+  if (!state.projectFiles.length) {
+    const empty = document.createElement("div");
+    empty.className = "project-empty";
+    empty.textContent = "项目里没有 HTML 文件";
+    list.appendChild(empty);
+    return;
+  }
+  state.projectFiles.forEach((file) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "project-item" + (file.rel === state.currentRel ? " active" : "");
+    const dir = file.dir ? file.dir + "/" : "";
+    if (dir) {
+      const span = document.createElement("span");
+      span.className = "project-dir";
+      span.textContent = dir;
+      btn.appendChild(span);
+    }
+    btn.appendChild(document.createTextNode(file.title || file.rel));
+    btn.title = file.rel;
+    btn.addEventListener("click", () => { openProjectFile(file.rel).catch(showError); });
+    list.appendChild(btn);
+  });
+}
+async function openProjectFile(rel) {
+  if (state.dirty) await saveNow();
+  const res = await hostCall("host.workspace.load", { path: rel });
+  if (!res || !res.ok) throw new Error((res && res.error) || "读取项目文件失败");
+  state.currentRel = res.rel || rel;
+  const dir = state.currentRel.includes("/") ? state.currentRel.slice(0, state.currentRel.lastIndexOf("/")) : "";
+  state.currentDir = dir;
+  state.baseHref = bookAssetsOrigin ? bookAssetsOrigin.replace(/\/?$/, "/") + (dir ? dir + "/" : "") : "";
+  state.title = res.name || state.currentRel.split("/").pop();
+  state.html = res.data ? decodeText(res.data) : "";
+  state.path = res.path || state.currentRel;
+  state.dirty = false;
+  $("fileName").textContent = state.title;
+  $("filePath").textContent = state.projectName + " / " + state.currentRel;
+  document.title = (state.projectName || state.title) + " · HTML 项目";
+  renderToc();
+  renderRead();
+  renderProjectList();
+  const panel = $("projectPanel");
+  if (panel) panel.hidden = true;
+  setStatus("已加载 " + state.currentRel, "ok");
+  if (state.mode === "edit" && state.editorInited) sendEditorDocument();
+}
+async function initProject() {
+  const info = await hostCall("host.project.list");
+  if (!info || !info.ok) throw new Error((info && info.error) || "读取项目失败");
+  state.projectName = info.name || state.projectName || "HTML 项目";
+  state.projectRoot = info.root || "";
+  state.projectFiles = Array.isArray(info.files) ? info.files : [];
+  $("fileName").textContent = state.projectName;
+  $("filePath").textContent = state.projectRoot;
+  document.title = state.projectName + " · HTML 项目";
+  $("projectTitle").textContent = state.projectName;
+  $("projectBtn").hidden = false;
+  renderProjectList();
+  if (!state.projectFiles.length) throw new Error("项目里没有 .html/.htm 文件，请先新建项目。");
+  const target = state.projectFiles.find((f) => f.isIndex) || state.projectFiles[0];
+  await openProjectFile(target.rel);
+  if (host) host.postMessage({ type: "host.ready" });
+}
+async function initLegacy() {
     $("filePath").textContent = params.get("name") || "";
     document.title = state.title + " · HTML 阅读器";
     try {
@@ -459,12 +535,21 @@
     } catch (e) {
       showError(e);
     }
-  }
+}
 
   async function handleEditorFileRequest(request) {
     const command = String(request.command || "");
     const extra = Object.assign({}, request);
     delete extra.requestId; delete extra.type; delete extra.channel; delete extra.command;
+    if (state.projectMode) {
+      const withDir = (value) => {
+        if (!value || /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith("//")) return value;
+        return (state.currentDir ? state.currentDir + "/" : "") + String(value).replace(/^\/+/, "");
+      };
+      if (extra.path) extra.path = withDir(extra.path);
+      if (extra.from) extra.from = withDir(extra.from);
+      if (extra.to) extra.to = withDir(extra.to);
+    }
     try {
       const res = await hostCall(command, extra);
       sendEditor("file-result", {
@@ -484,10 +569,12 @@
       const dot = safeName.lastIndexOf(".");
       const ext = dot >= 0 ? safeName.slice(dot) : ".png";
       const stem = (dot >= 0 ? safeName.slice(0, dot) : safeName) || "image";
-      const path = "assets/" + Date.now().toString(36) + "-" + stem + ext;
+      const dirPrefix = state.projectMode && state.currentDir ? state.currentDir + "/" : "";
+      const path = dirPrefix + "assets/" + Date.now().toString(36) + "-" + stem + ext;
       const res = await hostCall("host.file.save", { path: path, data: request.data || "" });
       if (!res || !res.ok) throw new Error((res && res.error) || "保存图片失败");
-      sendEditor("asset-result", { requestId: request.requestId, ok: true, path: res.path || path });
+      const displayPath = state.projectMode && state.currentDir && path.startsWith(state.currentDir + "/") ? path.slice(state.currentDir.length + 1) : path;
+      sendEditor("asset-result", { requestId: request.requestId, ok: true, path: displayPath });
       setStatus("已插入图片", "ok");
     } catch (e) {
       sendEditor("asset-result", { requestId: request.requestId, ok: false, error: String(e && e.message ? e.message : e) });
@@ -531,9 +618,24 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") { e.preventDefault(); openFindBar(); }
     else if (e.key === "Escape" && !$("findBar").hidden) closeFindBar();
   });
+  $("projectBtn").addEventListener("click", () => {
+    const panel = $("projectPanel");
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) renderProjectList();
+  });
+  $("projectCloseBtn").addEventListener("click", () => { $("projectPanel").hidden = true; });
   $("editModeBtn").addEventListener("click", () => setMode("edit"));
   $("saveBtn").addEventListener("click", () => saveNow().catch(showError));
   $("errorClose").addEventListener("click", () => { $("errorMask").hidden = true; });
+
+  async function init() {
+    if (state.projectMode) {
+      try { await initProject(); } catch (e) { showError(e); if (host) host.postMessage({ type: "host.ready" }); }
+      return;
+    }
+    await initLegacy();
+  }
 
   init();
 })();
