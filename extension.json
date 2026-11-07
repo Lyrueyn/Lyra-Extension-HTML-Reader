@@ -1,7 +1,7 @@
 ﻿{
   "id": "html-reader",
   "name": "HTML 阅读器",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "entry": "index.html",
   "description": "HTML 项目阅读器：打开整个项目文件夹，不复制文件；浏览/编辑项目内 HTML。",
   "kind": "reader",
@@ -17,7 +17,7 @@
     "navLabel": "HTML",
     "glyph": "\uE8A5",
     "title": "HTML 阅读",
-    "description": "导入项目选择 HTML 文件，以所在文件夹为项目根；只记录路径，不复制文件。",
+    "description": "导入项目选择项目文件夹；只记录路径，不复制文件。",
     "openLabel": "打开项目",
     "addLabel": "＋ 导入项目",
     "newLabel": "＋ 新建项目",
