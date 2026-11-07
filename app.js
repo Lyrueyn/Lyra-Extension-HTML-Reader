@@ -20,6 +20,7 @@
     requestId: 1,
       projectMode: params.get("project") === "1",
       projectName: params.get("projectName") || "",
+      projectEntry: params.get("projectEntry") || "",
       projectFiles: [],
       projectRoot: "",
       currentRel: "",
@@ -195,6 +196,7 @@
     if (mode === state.mode) return;
     state.mode = mode;
     const editing = mode === "edit";
+    updateProjectUI();
     $("readModeBtn").classList.toggle("active", !editing);
     $("editModeBtn").classList.toggle("active", editing);
     $("readFrame").hidden = editing;
@@ -446,6 +448,12 @@
     } catch { }
   }
 
+function updateProjectUI() {
+  const btn = $("projectBtn");
+  if (!btn) return;
+  btn.hidden = !state.projectMode || state.mode !== "edit";
+  if (btn.hidden) { const panel = $("projectPanel"); if (panel) panel.hidden = true; }
+}
 function renderProjectList() {
   const list = $("projectList");
   if (!list) return;
@@ -495,7 +503,10 @@ async function openProjectFile(rel) {
   const panel = $("projectPanel");
   if (panel) panel.hidden = true;
   setStatus("已加载 " + state.currentRel, "ok");
-  if (state.mode === "edit" && state.editorInited) sendEditorDocument();
+  if (state.mode === "edit") {
+    ensureEditor();
+    if (state.editorInited) sendEditorDocument();
+  }
 }
 async function initProject() {
   const info = await hostCall("host.project.list");
@@ -507,10 +518,11 @@ async function initProject() {
   $("filePath").textContent = state.projectRoot;
   document.title = state.projectName + " · HTML 项目";
   $("projectTitle").textContent = state.projectName;
-  $("projectBtn").hidden = false;
+  updateProjectUI();
   renderProjectList();
   if (!state.projectFiles.length) throw new Error("项目里没有 .html/.htm 文件，请先新建项目。");
-  const target = state.projectFiles.find((f) => f.isIndex) || state.projectFiles[0];
+  const target = state.projectFiles.find((f) => f.rel === state.projectEntry) ||
+    state.projectFiles.find((f) => f.isIndex) || state.projectFiles[0];
   await openProjectFile(target.rel);
   if (host) host.postMessage({ type: "host.ready" });
 }
