@@ -29,7 +29,13 @@
     </header>
     <main class="content">
       <aside id="projectPanel" class="project-panel" hidden>
-        <div class="project-head"><span id="projectTitle">项目</span><button id="projectCloseBtn" class="toc-close" type="button" title="关闭">×</button></div>
+        <div class="project-head">
+          <span id="projectTitle">项目</span>
+          <div class="project-head-actions">
+            <button id="projectRefreshBtn" class="tree-tool" type="button" title="刷新文件树">↻</button>
+            <button id="projectCloseBtn" class="tree-tool" type="button" title="关闭">×</button>
+          </div>
+        </div>
         <div id="projectList" class="project-list"></div>
       </aside>
       <iframe id="readFrame" class="frame" title="HTML 阅读" allow="autoplay" sandbox="allow-same-origin allow-scripts allow-forms allow-modals"></iframe>

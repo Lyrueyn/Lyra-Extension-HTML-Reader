@@ -26,6 +26,8 @@
       currentRel: "",
       currentDir: "",
       baseHref: bookAssetsOrigin ? bookAssetsOrigin.replace(/\/?$/, "/") : "",
+      projectExpanded: new Set(),
+      projectTreeOpen: false,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -448,11 +450,108 @@
     } catch { }
   }
 
+function setProjectTreeOpen(open) {
+  state.projectTreeOpen = !!open;
+  const panel = $("projectPanel");
+  if (panel) panel.hidden = !state.projectTreeOpen;
+  document.body.classList.toggle("project-tree-open", state.projectTreeOpen);
+  const btn = $("projectBtn");
+  if (btn) btn.classList.toggle("active", state.projectTreeOpen);
+  if (state.projectTreeOpen) renderProjectList();
+}
 function updateProjectUI() {
   const btn = $("projectBtn");
   if (!btn) return;
-  btn.hidden = !state.projectMode || state.mode !== "edit";
-  if (btn.hidden) { const panel = $("projectPanel"); if (panel) panel.hidden = true; }
+  const editable = state.projectMode && state.mode === "edit";
+  btn.hidden = !editable;
+  if (!editable) {
+    if (state.projectTreeOpen) setProjectTreeOpen(false);
+  } else if (!state.projectTreeOpen) {
+    setProjectTreeOpen(true);
+  }
+}
+function projectFileIcon(file) {
+  const ext = String(file.ext || (file.rel || "").split(".").pop() || "").toLowerCase().replace(/^\./, "");
+  if (ext === "html" || ext === "htm") return { text: "</>", cls: "html" };
+  if (ext === "css") return { text: "{ }", cls: "css" };
+  if (ext === "js" || ext === "mjs" || ext === "ts") return { text: "JS", cls: "js" };
+  if (ext === "json") return { text: "{ }", cls: "json" };
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext)) return { text: "▧", cls: "image" };
+  return { text: "•", cls: "" };
+}
+function buildProjectTree() {
+  const root = { dirs: new Map(), files: [] };
+  for (const file of state.projectFiles) {
+    const rel = String(file.rel || file.name || "");
+    if (!rel) continue;
+    const parts = rel.split("/");
+    let node = root;
+    for (let i = 0; i < parts.length - 1; i += 1) {
+      const name = parts[i];
+      const path = parts.slice(0, i + 1).join("/");
+      if (!node.dirs.has(name)) node.dirs.set(name, { name: name, path: path, node: { dirs: new Map(), files: [] } });
+      node = node.dirs.get(name).node;
+    }
+    node.files.push(file);
+  }
+  return root;
+}
+function expandProjectParents(rel) {
+  const parts = String(rel || "").split("/");
+  for (let i = 1; i < parts.length; i += 1) state.projectExpanded.add(parts.slice(0, i).join("/"));
+}
+function renderProjectTree(node, container, depth) {
+  const dirs = Array.from(node.dirs.values()).sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+  const files = node.files.slice().sort((a, b) => String(a.name || a.rel).localeCompare(String(b.name || b.rel), "zh-CN"));
+  for (const dir of dirs) {
+    const open = state.projectExpanded.has(dir.path);
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "tree-row tree-dir" + (open ? " open" : "");
+    row.style.paddingLeft = (6 + depth * 14) + "px";
+    row.title = dir.path;
+    const chevron = document.createElement("span");
+    chevron.className = "tree-chevron";
+    chevron.textContent = "▸";
+    const icon = document.createElement("span");
+    icon.className = "tree-icon dir";
+    icon.textContent = "▤";
+    const name = document.createElement("span");
+    name.className = "tree-name";
+    name.textContent = dir.name;
+    row.append(chevron, icon, name);
+    const children = document.createElement("div");
+    children.className = "tree-children";
+    children.hidden = !open;
+    row.addEventListener("click", () => {
+      if (state.projectExpanded.has(dir.path)) state.projectExpanded.delete(dir.path);
+      else state.projectExpanded.add(dir.path);
+      renderProjectList();
+    });
+    container.append(row, children);
+    renderProjectTree(dir.node, children, depth + 1);
+  }
+  for (const file of files) {
+    const isHtml = file.html === true || /\\.html?$/i.test(String(file.rel || ""));
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "tree-row tree-file" + (file.rel === state.currentRel ? " active" : "") + (isHtml ? "" : " disabled");
+    row.style.paddingLeft = (6 + depth * 14) + "px";
+    row.title = file.rel;
+    const spacer = document.createElement("span");
+    spacer.className = "tree-chevron";
+    const iconInfo = projectFileIcon(file);
+    const icon = document.createElement("span");
+    icon.className = "tree-icon " + iconInfo.cls;
+    icon.textContent = iconInfo.text;
+    const name = document.createElement("span");
+    name.className = "tree-name";
+    name.textContent = file.name || String(file.rel || "").split("/").pop();
+    row.append(spacer, icon, name);
+    if (isHtml) row.addEventListener("click", () => { openProjectFile(file.rel).catch(showError); });
+    else row.addEventListener("click", () => setStatus("只支持打开 HTML 文件：" + file.rel, "error"));
+    container.appendChild(row);
+  }
 }
 function renderProjectList() {
   const list = $("projectList");
@@ -461,26 +560,24 @@ function renderProjectList() {
   if (!state.projectFiles.length) {
     const empty = document.createElement("div");
     empty.className = "project-empty";
-    empty.textContent = "项目里没有 HTML 文件";
+    empty.textContent = "项目里没有文件";
     list.appendChild(empty);
     return;
   }
-  state.projectFiles.forEach((file) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "project-item" + (file.rel === state.currentRel ? " active" : "");
-    const dir = file.dir ? file.dir + "/" : "";
-    if (dir) {
-      const span = document.createElement("span");
-      span.className = "project-dir";
-      span.textContent = dir;
-      btn.appendChild(span);
-    }
-    btn.appendChild(document.createTextNode(file.title || file.rel));
-    btn.title = file.rel;
-    btn.addEventListener("click", () => { openProjectFile(file.rel).catch(showError); });
-    list.appendChild(btn);
-  });
+  const root = buildProjectTree();
+  renderProjectTree(root, list, 0);
+}
+function htmlProjectFiles() {
+  return state.projectFiles.filter((file) => file.html === true || /\\.html?$/i.test(String(file.rel || "")));
+}
+async function refreshProjectFiles() {
+  try {
+    const info = await hostCall("host.project.list");
+    if (!info || !info.ok) throw new Error((info && info.error) || "刷新项目失败");
+    state.projectFiles = Array.isArray(info.files) ? info.files : [];
+    renderProjectList();
+    setStatus("文件树已刷新", "ok");
+  } catch (e) { setStatus("刷新文件树失败：" + (e && e.message ? e.message : e), "error"); }
 }
 async function openProjectFile(rel) {
   if (state.dirty) await saveNow();
@@ -631,12 +728,11 @@ async function initLegacy() {
     else if (e.key === "Escape" && !$("findBar").hidden) closeFindBar();
   });
   $("projectBtn").addEventListener("click", () => {
-    const panel = $("projectPanel");
-    if (!panel) return;
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden) renderProjectList();
+    if (!state.projectMode) return;
+    setProjectTreeOpen(!state.projectTreeOpen);
   });
-  $("projectCloseBtn").addEventListener("click", () => { $("projectPanel").hidden = true; });
+  $("projectCloseBtn").addEventListener("click", () => setProjectTreeOpen(false));
+  $("projectRefreshBtn").addEventListener("click", () => refreshProjectFiles());
   $("editModeBtn").addEventListener("click", () => setMode("edit"));
   $("saveBtn").addEventListener("click", () => saveNow().catch(showError));
   $("errorClose").addEventListener("click", () => { $("errorMask").hidden = true; });

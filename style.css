@@ -189,3 +189,77 @@ mark.lyra-find-mark.current { background: #ff9d2e; color: #2b1600; }
 .project-item.active { background: #24506d; color: #fff; }
 .project-item .project-dir { color: #6f8ba3; margin-right: 5px; }
 .project-empty { color: #7f96aa; font-size: 11px; padding: 10px; }
+
+
+/* WebStorm-like project tree */
+.project-panel {
+  position: absolute;
+  z-index: 19;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 272px;
+  display: flex;
+  flex-direction: column;
+  background: #0f151b;
+  border: 0;
+  border-right: 1px solid #273747;
+  border-radius: 0;
+  box-shadow: 6px 0 18px rgba(0,0,0,.16);
+  overflow: hidden;
+}
+.project-panel[hidden] { display: none; }
+body.project-tree-open .content .frame {
+  left: 272px;
+  width: calc(100% - 272px);
+}
+body.project-tree-open .read-progress { left: 282px; right: 10px; }
+body.project-tree-open .find-bar { right: 10px; }
+.project-head {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 10px;
+  border-bottom: 1px solid #273747;
+  color: #e2edf7;
+  font: 600 12px "Microsoft YaHei", "Segoe UI", sans-serif;
+  letter-spacing: .2px;
+}
+.project-head-actions { display: flex; gap: 4px; }
+.tree-tool {
+  width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 4px;
+  background: transparent; color: #9bb0c3; font-size: 13px; cursor: pointer;
+}
+.tree-tool:hover { background: #1c2b38; color: #fff; border-color: #334b5f; }
+.project-list {
+  flex: 1; overflow: auto; padding: 4px 3px 12px;
+  scrollbar-width: thin; scrollbar-color: #334b5f transparent;
+}
+.tree-row {
+  display: flex; align-items: center; width: 100%; min-height: 23px;
+  padding: 3px 6px; border: 0; border-radius: 4px;
+  background: transparent; color: #b9c9d8; text-align: left;
+  font: 11.5px Consolas, "Cascadia Mono", "Microsoft YaHei", monospace;
+  cursor: pointer; white-space: nowrap; overflow: hidden;
+}
+.tree-row:hover { background: #1a2a37; color: #fff; }
+.tree-row.active { background: #245273; color: #fff; }
+.tree-row.disabled { color: #74879a; cursor: default; }
+.tree-row.disabled:hover { background: transparent; color: #74879a; }
+.tree-chevron {
+  flex: 0 0 13px; width: 13px; text-align: center; color: #7f96aa; font-size: 10px;
+  transition: transform .1s ease;
+}
+.tree-row.open .tree-chevron { transform: rotate(90deg); }
+.tree-icon {
+  flex: 0 0 18px; width: 18px; text-align: center; margin-right: 3px;
+  font-size: 11px; color: #8fb3cc;
+}
+.tree-icon.html { color: #58a6ff; font-weight: 700; }
+.tree-icon.css { color: #b388ff; }
+.tree-icon.js { color: #ffd166; }
+.tree-icon.json { color: #f6c177; }
+.tree-icon.image { color: #7ee0ff; }
+.tree-icon.dir { color: #9db6ca; }
+.tree-name { overflow: hidden; text-overflow: ellipsis; }
+.tree-children[hidden] { display: none; }
+.tree-empty-directory { color: #5d7183; font-size: 10px; padding: 3px 8px 3px 30px; }
