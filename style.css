@@ -263,3 +263,50 @@ body.project-tree-open .find-bar { right: 10px; }
 .tree-name { overflow: hidden; text-overflow: ellipsis; }
 .tree-children[hidden] { display: none; }
 .tree-empty-directory { color: #5d7183; font-size: 10px; padding: 3px 8px 3px 30px; }
+
+
+/* Reader chrome follows the embedded editor theme */
+html[data-reader-theme="lyra"] { --bg:#07111d; --panel:#0d1b2c; --panel2:#12253a; --line:#244766; --text:#e8f3ff; --muted:#8db6d8; --accent:#4d9fff; --accent-deep:#2a6fc4; }
+html[data-reader-theme="violet"] { --bg:#0e0a17; --panel:#151021; --panel2:#1c1430; --line:#3a2b55; --text:#eee7ff; --muted:#a99ac7; --accent:#b388ff; --accent-deep:#8153c7; }
+html[data-reader-theme="emerald"] { --bg:#07130f; --panel:#0d1d17; --panel2:#12271f; --line:#244e3e; --text:#e4fff2; --muted:#8fb9a8; --accent:#35e6a5; --accent-deep:#1b8f66; }
+html[data-reader-theme="sunset"] { --bg:#170e09; --panel:#24160e; --panel2:#2f1d11; --line:#5a3a23; --text:#fff0df; --muted:#c5a58b; --accent:#ffa45c; --accent-deep:#b96b2f; }
+html[data-reader-theme="sakura"] { --bg:#160d12; --panel:#22131b; --panel2:#2d1923; --line:#593343; --text:#ffeaf2; --muted:#c79caf; --accent:#ff9ec4; --accent-deep:#c65f87; }
+html[data-reader-theme="light"] { --bg:#eef3f8; --panel:#ffffff; --panel2:#f3f7fb; --line:#cfdae6; --text:#1f2937; --muted:#5f7183; --accent:#138fc9; --accent-deep:#0b6b96; }
+html[data-reader-theme] body { background: var(--bg); color: var(--text); }
+html[data-reader-theme] .top { background: var(--panel); border-color: var(--line); }
+html[data-reader-theme] .file-name { color: var(--text); }
+html[data-reader-theme] .file-path { color: var(--muted); }
+html[data-reader-theme] .mode-switch { background: var(--panel2); border-color: var(--line); }
+html[data-reader-theme] .mode { color: var(--muted); }
+html[data-reader-theme] .mode.active { background: var(--accent); color: #06121a; box-shadow: none; }
+html[data-reader-theme="light"] .mode.active { color: #ffffff; }
+html[data-reader-theme] button.ghost { background: var(--panel2); border-color: var(--line); color: var(--muted); }
+html[data-reader-theme] button.ghost:hover { border-color: var(--accent); color: var(--text); }
+html[data-reader-theme] .status { color: var(--muted); }
+html[data-reader-theme] .content { background: var(--bg); }
+html[data-reader-theme] .project-panel { background: var(--panel); border-color: var(--line); box-shadow: 6px 0 18px rgba(0,0,0,.22); }
+html[data-reader-theme] .project-head { color: var(--text); border-color: var(--line); }
+html[data-reader-theme] .tree-tool { color: var(--muted); }
+html[data-reader-theme] .tree-tool:hover { background: var(--panel2); color: var(--text); border-color: var(--line); }
+html[data-reader-theme] .tree-row { color: var(--muted); }
+html[data-reader-theme] .tree-row:hover { background: var(--panel2); color: var(--text); }
+html[data-reader-theme] .tree-row.active { background: var(--panel2); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+html[data-reader-theme] .tree-icon.dir { color: var(--muted); }
+html[data-reader-theme] .tree-icon.html { color: var(--accent); }
+html[data-reader-theme] .tree-icon.css { color: var(--accent); opacity: .8; }
+html[data-reader-theme] .tree-icon.js { color: var(--accent); opacity: .7; }
+html[data-reader-theme] .tree-icon.image { color: var(--muted); }
+html[data-reader-theme] .tree-icon.json { color: var(--muted); }
+html[data-reader-theme] .project-empty { color: var(--muted); }
+html[data-reader-theme] .toc-panel { background: var(--panel); border-color: var(--line); box-shadow: 0 12px 34px rgba(0,0,0,.24); }
+html[data-reader-theme] .toc-head { color: var(--text); border-color: var(--line); }
+html[data-reader-theme] .toc-item { color: var(--muted); }
+html[data-reader-theme] .toc-item:hover { background: var(--panel2); color: var(--text); }
+html[data-reader-theme] .toc-item.active { background: var(--panel2); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+html[data-reader-theme] .find-bar { background: var(--panel); border-color: var(--line); }
+html[data-reader-theme] .find-bar input { background: var(--panel2); color: var(--text); border-color: var(--line); }
+html[data-reader-theme] .find-bar button { background: var(--panel2); color: var(--muted); border-color: var(--line); }
+html[data-reader-theme] .find-count { color: var(--muted); }
+html[data-reader-theme] .error-card { background: var(--panel); color: var(--text); }
+html[data-reader-theme] .error-card h3 { color: var(--text); }
+html[data-reader-theme] .logo { color: #06121a; }

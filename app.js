@@ -32,6 +32,14 @@
 
   const $ = (id) => document.getElementById(id);
 
+  function applyReaderTheme(id) {
+    const allowed = ["lyra", "violet", "emerald", "sunset", "sakura", "light"];
+    const theme = allowed.includes(id) ? id : "lyra";
+    document.documentElement.dataset.readerTheme = theme;
+    try { localStorage.setItem("lyra-reader-theme", theme); } catch { }
+  }
+  try { applyReaderTheme(localStorage.getItem("lyra-reader-theme") || "lyra"); } catch { applyReaderTheme("lyra"); }
+
   function setStatus(text, tone) {
     const el = $("status");
     el.textContent = text;
@@ -144,7 +152,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=291&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=292&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -693,6 +701,7 @@ async function initLegacy() {
     const frame = $("editFrame");
     if (!frame || event.source !== frame.contentWindow) return;
     const d = event.data || {};
+    if (d.type === "theme") { applyReaderTheme(d.theme || "lyra"); return; }
     if (d.channel !== EDIT_CHANNEL) return;
     if (d.type === "file-request") { handleEditorFileRequest(d); return; }
     if (d.type === "asset-request") {
