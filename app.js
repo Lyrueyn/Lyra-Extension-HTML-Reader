@@ -90,7 +90,7 @@
       if (/<html[\s>]/i.test(html)) return html.replace(/<html([^>]*)>/i, "<html$1><head>" + imageCss + "</head>");
       return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + imageCss + "</head><body>" + html + "</body></html>";
     }
-    const origin = bookAssetsOrigin.replace(/\/?$/, "/");
+    const origin = (state.baseHref || bookAssetsOrigin).replace(/\/?$/, "/");
     const base = '<base href="' + origin.replace(/"/g, "&quot;") + '">' + imageCss;
     if (/<head[\s>]/i.test(html)) return html.replace(/<head([^>]*)>/i, "<head$1>" + base);
     if (/<html[\s>]/i.test(html)) return html.replace(/<html([^>]*)>/i, "<html$1><head>" + base + "</head>");
@@ -155,7 +155,7 @@
     frame.contentWindow.postMessage(Object.assign({ channel: EDIT_CHANNEL, type: type }, extra || {}), editorTargetOrigin());
   }
   function sendEditorDocument() {
-    sendEditor(state.editorInited ? "set-document" : "init", { html: state.html, title: state.title, assetMode: "external", baseHref: bookAssetsOrigin });
+    sendEditor(state.editorInited ? "set-document" : "init", { html: state.html, title: state.title, assetMode: "external", baseHref: state.baseHref || bookAssetsOrigin });
     state.editorInited = true;
   }
   function ensureEditor() {
@@ -597,8 +597,6 @@ async function openProjectFile(rel) {
   renderToc();
   renderRead();
   renderProjectList();
-  const panel = $("projectPanel");
-  if (panel) panel.hidden = true;
   setStatus("已加载 " + state.currentRel, "ok");
   if (state.mode === "edit") {
     ensureEditor();
