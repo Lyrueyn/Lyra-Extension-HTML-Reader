@@ -154,7 +154,7 @@ const startEdit = params.get("startEdit") === "1";
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=300&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=301&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
