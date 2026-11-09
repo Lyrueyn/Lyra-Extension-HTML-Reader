@@ -5,6 +5,7 @@
   const params = new URLSearchParams(location.search);
   const editorOrigin = params.get("extensionsOrigin") || "https://lyra-extensions.local";
   const bookAssetsOrigin = params.get("bookAssetsOrigin") || "";
+const editorEnabled = params.get("editorEnabled") !== "0";
   const isFilePreview = location.protocol === "file:";
   const EDIT_CHANNEL = "lyra-editor";
 
@@ -152,7 +153,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=299&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=300&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -167,6 +168,7 @@
     state.editorInited = true;
   }
   function ensureEditor() {
+      if (!editorEnabled) return;
     const frame = $("editFrame");
     if (frame.dataset.loaded === "1") return;
     frame.dataset.loaded = "1";
@@ -203,6 +205,7 @@
   }
 
   function setMode(mode) {
+      if (editing && !editorEnabled) return;
     if (mode === state.mode) return;
     state.mode = mode;
     const editing = mode === "edit";
@@ -754,6 +757,9 @@ async function initLegacy() {
   });
   $("projectCloseBtn").addEventListener("click", () => setProjectTreeOpen(false));
   $("projectRefreshBtn").addEventListener("click", () => refreshProjectFiles());
+    if (!editorEnabled) {
+      try { $("editModeBtn").hidden = true; $("saveBtn").hidden = true; } catch { }
+    }
   $("editModeBtn").addEventListener("click", () => setMode("edit"));
   $("saveBtn").addEventListener("click", () => saveNow().catch(showError));
   $("errorClose").addEventListener("click", () => { $("errorMask").hidden = true; });
