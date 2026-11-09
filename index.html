@@ -32,6 +32,8 @@
         <div class="project-head">
           <span id="projectTitle">项目</span>
           <div class="project-head-actions">
+            <button id="projectNewFileBtn" class="tree-tool" type="button" title="新建文件">＋</button>
+            <button id="projectNewFolderBtn" class="tree-tool" type="button" title="新建文件夹">▤＋</button>
             <button id="projectRefreshBtn" class="tree-tool" type="button" title="刷新文件树">↻</button>
             <button id="projectCloseBtn" class="tree-tool" type="button" title="关闭">×</button>
           </div>
@@ -54,7 +56,19 @@
         </aside>
     </main>
   </div>
-  <div id="errorMask" class="error-mask" hidden>
+      <div id="projectCtxMenu" class="project-ctx-menu" hidden></div>
+    <div id="projectDialogMask" class="project-dialog-mask" hidden>
+      <div class="project-dialog">
+        <h3 id="projectDialogTitle"></h3>
+        <div id="projectDialogMessage" class="project-dialog-message"></div>
+        <input id="projectDialogInput" class="project-dialog-input" type="text" spellcheck="false" autocomplete="off"/>
+        <div class="project-dialog-actions">
+          <button id="projectDialogCancel" class="ghost" type="button">取消</button>
+          <button id="projectDialogOk" class="primary" type="button">确定</button>
+        </div>
+      </div>
+    </div>
+<div id="errorMask" class="error-mask" hidden>
     <div class="error-card">
       <h3>HTML 阅读器无法打开</h3>
       <p id="errorText"></p>

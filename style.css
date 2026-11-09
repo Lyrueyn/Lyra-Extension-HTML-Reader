@@ -310,3 +310,31 @@ html[data-reader-theme] .find-count { color: var(--muted); }
 html[data-reader-theme] .error-card { background: var(--panel); color: var(--text); }
 html[data-reader-theme] .error-card h3 { color: var(--text); }
 html[data-reader-theme] .logo { color: #06121a; }
+
+
+/* Project tree context menu / dialogs */
+.project-ctx-menu { position: fixed; z-index: 60; min-width: 172px; padding: 4px; background: #111b25; border: 1px solid #345066; border-radius: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.45); }
+.project-ctx-menu[hidden] { display: none; }
+.project-ctx-item { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 16px; border: 0; background: transparent; color: #dbe4f0; text-align: left; font-size: 12px; padding: 7px 9px; border-radius: 5px; cursor: pointer; }
+.project-ctx-item:hover { background: #20344d; color: #fff; }
+.project-ctx-item.danger { color: #ff9aaa; }
+.project-ctx-item.danger:hover { background: #3a2028; }
+.project-ctx-sep { height: 1px; margin: 3px 4px; background: #26303d; }
+.project-dialog-mask { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgba(3,8,14,.55); }
+.project-dialog-mask[hidden] { display: none; }
+.project-dialog { width: min(420px, 88vw); background: #121c26; border: 1px solid #345066; border-radius: 12px; box-shadow: 0 22px 60px rgba(0,0,0,.55); padding: 16px 18px; }
+.project-dialog h3 { margin: 0 0 6px; color: #eaf2ff; font-size: 16px; }
+.project-dialog-message { color: #9fb3c7; font-size: 12px; line-height: 1.7; margin-bottom: 8px; white-space: pre-wrap; }
+.project-dialog-input { width: 100%; box-sizing: border-box; background: #0b1118; border: 1px solid #2b4359; border-radius: 7px; color: #eaf2ff; padding: 8px 10px; outline: none; font: 12px Consolas, "Microsoft YaHei", sans-serif; }
+.project-dialog-input:focus { border-color: #4d9fff; }
+.project-dialog-input[hidden] { display: none; }
+.project-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.project-dialog-actions .primary { background: #4d9fff; color: #fff; border: 0; border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+html[data-reader-theme] .project-ctx-menu { background: var(--panel); border-color: var(--line); }
+html[data-reader-theme] .project-ctx-item { color: var(--text); }
+html[data-reader-theme] .project-ctx-item:hover { background: var(--panel2); }
+html[data-reader-theme] .project-dialog { background: var(--panel); border-color: var(--line); }
+html[data-reader-theme] .project-dialog h3 { color: var(--text); }
+html[data-reader-theme] .project-dialog-message { color: var(--muted); }
+html[data-reader-theme] .project-dialog-input { background: var(--panel2); border-color: var(--line); color: var(--text); }
+html[data-reader-theme] .project-dialog-actions .primary { background: var(--accent); }

@@ -24,6 +24,7 @@ const startEdit = params.get("startEdit") === "1";
       projectName: params.get("projectName") || "",
       projectEntry: params.get("projectEntry") || "",
       projectFiles: [],
+      projectDirs: [],
       projectRoot: "",
       currentRel: "",
       currentDir: "",
@@ -493,6 +494,16 @@ function projectFileIcon(file) {
 }
 function buildProjectTree() {
   const root = { dirs: new Map(), files: [] };
+  for (const dirRel of (state.projectDirs || [])) {
+    const parts = String(dirRel || "").split("/").filter(Boolean);
+    let dirNode = root;
+    for (let di = 0; di < parts.length; di += 1) {
+      const dirName = parts[di];
+      const dirPath = parts.slice(0, di + 1).join("/");
+      if (!dirNode.dirs.has(dirName)) dirNode.dirs.set(dirName, { name: dirName, path: dirPath, node: { dirs: new Map(), files: [] } });
+      dirNode = dirNode.dirs.get(dirName).node;
+    }
+  }
   for (const file of state.projectFiles) {
     const rel = String(file.rel || file.name || "");
     if (!rel) continue;
@@ -522,6 +533,9 @@ function renderProjectTree(node, container, depth) {
     row.className = "tree-row tree-dir" + (open ? " open" : "");
     row.style.paddingLeft = (6 + depth * 14) + "px";
     row.title = dir.path;
+    row.dataset.kind = "dir";
+    row.dataset.rel = dir.path;
+    row.dataset.name = dir.name;
     const chevron = document.createElement("span");
     chevron.className = "tree-chevron";
     chevron.textContent = "▸";
@@ -550,6 +564,9 @@ function renderProjectTree(node, container, depth) {
     row.className = "tree-row tree-file" + (file.rel === state.currentRel ? " active" : "") + (isHtml ? "" : " disabled");
     row.style.paddingLeft = (6 + depth * 14) + "px";
     row.title = file.rel;
+    row.dataset.kind = "file";
+    row.dataset.rel = file.rel;
+    row.dataset.name = file.name || projectBaseName(file.rel);
     const spacer = document.createElement("span");
     spacer.className = "tree-chevron";
     const iconInfo = projectFileIcon(file);
@@ -565,11 +582,222 @@ function renderProjectTree(node, container, depth) {
     container.appendChild(row);
   }
 }
+  // ---------- 项目文件树：新建 / 重命名 / 删除 ----------
+  let projectDialogState = null;
+  let projectMenuTarget = null;
+
+  function projectDirname(rel) {
+    const v = String(rel || "");
+    const i = v.lastIndexOf("/");
+    return i >= 0 ? v.slice(0, i) : "";
+  }
+
+  function projectJoin(dir, name) {
+    const d = String(dir || "").replace(/\/+$/, "");
+    return d ? d + "/" + name : name;
+  }
+
+  function projectBaseName(rel) {
+    const v = String(rel || "");
+    const i = v.lastIndexOf("/");
+    return i >= 0 ? v.slice(i + 1) : v;
+  }
+
+  function validateProjectName(name) {
+    const v = String(name || "").trim();
+    if (!v) throw new Error("名称不能为空");
+    if (v === "." || v === "..") throw new Error("名称不合法");
+    if (/[\\/:*?"<>|]/.test(v)) throw new Error("名称不能包含 \\ / : * ? \" < > |");
+    return v;
+  }
+
+  function openProjectDialog(title, message, value, hasInput, okText) {
+    return new Promise((resolve) => {
+      const mask = $("projectDialogMask");
+      const input = $("projectDialogInput");
+      $("projectDialogTitle").textContent = title || "";
+      $("projectDialogMessage").textContent = message || "";
+      input.hidden = hasInput === false;
+      input.value = value || "";
+      $("projectDialogOk").textContent = okText || "确定";
+      projectDialogState = { resolve: resolve, hasInput: hasInput !== false };
+      mask.hidden = false;
+      setTimeout(() => {
+        if (!input.hidden) { input.focus(); input.select(); }
+        else $("projectDialogOk").focus();
+      }, 20);
+    });
+  }
+
+  function closeProjectDialog(ok) {
+    const state = projectDialogState;
+    projectDialogState = null;
+    $("projectDialogMask").hidden = true;
+    if (!state) return;
+    let value = ok;
+    if (state.hasInput) {
+      value = ok ? $("projectDialogInput").value.trim() : null;
+    }
+    state.resolve(value);
+  }
+
+  function projectPrompt(title, value, message) {
+    return openProjectDialog(title, message, value, true, "确定");
+  }
+
+  function projectConfirm(title, message) {
+    return openProjectDialog(title, message, "", false, "删除");
+  }
+
+  function closeProjectMenu() {
+    const menu = $("projectCtxMenu");
+    if (menu) menu.hidden = true;
+    projectMenuTarget = null;
+  }
+
+  function showProjectMenu(x, y, target) {
+    const menu = $("projectCtxMenu");
+    if (!menu) return;
+    menu.innerHTML = "";
+    projectMenuTarget = target || null;
+    const isDir = target && target.kind === "dir";
+    const baseDir = target ? (isDir ? target.rel : projectDirname(target.rel)) : (state.currentRel ? projectDirname(state.currentRel) : "");
+    const add = (label, handler, danger) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "project-ctx-item" + (danger ? " danger" : "");
+      btn.textContent = label;
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeProjectMenu();
+        Promise.resolve().then(handler).catch(showError);
+      });
+      menu.appendChild(btn);
+    };
+    add("新建文件", () => createProjectFile(baseDir));
+    add("新建文件夹", () => createProjectFolder(baseDir));
+    if (target) {
+      const sep = document.createElement("div");
+      sep.className = "project-ctx-sep";
+      menu.appendChild(sep);
+      add("重命名…", () => renameProjectTarget(target));
+      add("删除", () => deleteProjectTarget(target), true);
+    }
+    menu.hidden = false;
+    menu.style.left = "0px";
+    menu.style.top = "0px";
+    const rect = menu.getBoundingClientRect();
+    menu.style.left = Math.max(6, Math.min(x, window.innerWidth - rect.width - 6)) + "px";
+    menu.style.top = Math.max(6, Math.min(y, window.innerHeight - rect.height - 6)) + "px";
+  }
+
+  function newProjectFileContent(name) {
+    if (/\.html?$/i.test(name)) {
+      return '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>' + name.replace(/\.html?$/i, "") + '</title>\n</head>\n<body>\n  <h1>新建页面</h1>\n</body>\n</html>\n';
+    }
+    if (/\.css$/i.test(name)) return "/* " + name + " */\n";
+    if (/\.js$/i.test(name)) return "// " + name + "\n";
+    if (/\.json$/i.test(name)) return "{}\n";
+    return "";
+  }
+
+  async function reloadProjectData() {
+    const info = await hostCall("host.project.list");
+    if (!info || !info.ok) throw new Error((info && info.error) || "刷新项目失败");
+    state.projectFiles = Array.isArray(info.files) ? info.files : [];
+    state.projectDirs = Array.isArray(info.dirs) ? info.dirs : [];
+    renderProjectList();
+    return info;
+  }
+
+  async function createProjectFile(dir) {
+    let name = await projectPrompt("新建文件", "", "文件名，例如 page.html");
+    if (name == null) return;
+    name = validateProjectName(name);
+    if (!/\.[a-z0-9]+$/i.test(name)) name += ".html";
+    const rel = projectJoin(dir, name);
+    const exists = state.projectFiles.some((f) => String(f.rel || "").toLowerCase() === rel.toLowerCase());
+    if (exists) throw new Error("文件已存在：" + rel);
+    const res = await hostCall("host.file.save", { path: rel, data: encodeText(newProjectFileContent(name)) });
+    if (!res || !res.ok) throw new Error((res && res.error) || "新建文件失败");
+    expandProjectParents(rel);
+    await reloadProjectData();
+    if (/\.html?$/i.test(name)) await openProjectFile(rel);
+    setStatus("已新建文件 " + rel, "ok");
+  }
+
+  async function createProjectFolder(dir) {
+    let name = await projectPrompt("新建文件夹", "", "文件夹名称");
+    if (name == null) return;
+    name = validateProjectName(name);
+    const rel = projectJoin(dir, name);
+    const exists = state.projectDirs.some((d) => String(d).toLowerCase() === rel.toLowerCase()) ||
+      state.projectFiles.some((f) => String(f.rel || "").toLowerCase() === rel.toLowerCase());
+    if (exists) throw new Error("已存在：" + rel);
+    const res = await hostCall("host.file.mkdir", { path: rel });
+    if (!res || !res.ok) throw new Error((res && res.error) || "新建文件夹失败");
+    expandProjectParents(rel);
+    state.projectExpanded.add(rel);
+    await reloadProjectData();
+    setStatus("已新建文件夹 " + rel, "ok");
+  }
+
+  async function renameProjectTarget(target) {
+    const oldRel = String(target.rel || "");
+    const oldName = target.name || projectBaseName(oldRel);
+    const next = await projectPrompt("重命名", oldName, "输入新名称");
+    if (next == null) return;
+    const newName = validateProjectName(next);
+    if (newName === oldName) return;
+    const toRel = projectJoin(projectDirname(oldRel), newName);
+    if (state.dirty) await saveNow();
+    const res = await hostCall("host.file.rename", { from: oldRel, to: toRel });
+    if (!res || !res.ok) throw new Error((res && res.error) || "重命名失败");
+    const affectsCurrent = state.currentRel === oldRel || state.currentRel.startsWith(oldRel + "/");
+    const nextCurrent = affectsCurrent ? toRel + state.currentRel.slice(oldRel.length) : state.currentRel;
+    await reloadProjectData();
+    if (affectsCurrent && nextCurrent) {
+      expandProjectParents(nextCurrent);
+      await openProjectFile(nextCurrent);
+    }
+    setStatus("已重命名 " + oldRel + " → " + toRel, "ok");
+  }
+
+  async function deleteProjectTarget(target) {
+    const rel = String(target.rel || "");
+    const isDir = target.kind === "dir";
+    const ok = await projectConfirm("删除" + (isDir ? "文件夹" : "文件"), "确定删除 " + rel + " 吗？\n" + (isDir ? "文件夹内的所有内容都会被删除。" : "文件会被删除。") + "\n此操作不可撤销。");
+    if (!ok) return;
+    if (state.dirty) await saveNow();
+    const res = await hostCall("host.file.delete", { path: rel });
+    if (!res || !res.ok) throw new Error((res && res.error) || "删除失败");
+    const wasCurrent = state.currentRel === rel || state.currentRel.startsWith(rel + "/");
+    await reloadProjectData();
+    if (wasCurrent) {
+      const next = htmlProjectFiles()[0];
+      if (next) {
+        expandProjectParents(next.rel);
+        await openProjectFile(next.rel);
+      } else {
+        state.currentRel = "";
+        state.currentDir = "";
+        state.title = state.projectName || "HTML 项目";
+        state.html = "";
+        if (state.editorInited) sendEditorDocument();
+        $("fileName").textContent = state.projectName || "HTML 项目";
+        $("filePath").textContent = state.projectRoot || "";
+        setStatus("项目里没有 HTML 文件了", "error");
+      }
+    }
+    setStatus("已删除 " + rel, "ok");
+  }
+
 function renderProjectList() {
   const list = $("projectList");
   if (!list) return;
   list.innerHTML = "";
-  if (!state.projectFiles.length) {
+  if (!state.projectFiles.length && !state.projectDirs.length) {
     const empty = document.createElement("div");
     empty.className = "project-empty";
     empty.textContent = "项目里没有文件";
@@ -587,6 +815,7 @@ async function refreshProjectFiles() {
     const info = await hostCall("host.project.list");
     if (!info || !info.ok) throw new Error((info && info.error) || "刷新项目失败");
     state.projectFiles = Array.isArray(info.files) ? info.files : [];
+    state.projectDirs = Array.isArray(info.dirs) ? info.dirs : [];
     renderProjectList();
     setStatus("文件树已刷新", "ok");
   } catch (e) { setStatus("刷新文件树失败：" + (e && e.message ? e.message : e), "error"); }
@@ -634,6 +863,7 @@ async function openProjectHref(href) {
   state.projectName = info.name || state.projectName || "HTML 项目";
   state.projectRoot = info.root || "";
   state.projectFiles = Array.isArray(info.files) ? info.files : [];
+  state.projectDirs = Array.isArray(info.dirs) ? info.dirs : [];
   $("fileName").textContent = state.projectName;
   $("filePath").textContent = state.projectRoot;
   document.title = state.projectName + " · HTML 项目";
@@ -759,6 +989,31 @@ async function initLegacy() {
   });
   $("projectCloseBtn").addEventListener("click", () => setProjectTreeOpen(false));
   $("projectRefreshBtn").addEventListener("click", () => refreshProjectFiles());
+  $("projectNewFileBtn").addEventListener("click", () => createProjectFile(state.currentRel ? projectDirname(state.currentRel) : "").catch(showError));
+  $("projectNewFolderBtn").addEventListener("click", () => createProjectFolder(state.currentRel ? projectDirname(state.currentRel) : "").catch(showError));
+  $("projectList").addEventListener("contextmenu", (event) => {
+    if (!state.projectMode || state.mode !== "edit") return;
+    event.preventDefault();
+    closeProjectMenu();
+    const row = event.target && event.target.closest ? event.target.closest(".tree-row") : null;
+    const target = row ? { kind: row.dataset.kind, rel: row.dataset.rel, name: row.dataset.name } : null;
+    showProjectMenu(event.clientX, event.clientY, target);
+  });
+  $("projectDialogOk").addEventListener("click", () => closeProjectDialog(true));
+  $("projectDialogCancel").addEventListener("click", () => closeProjectDialog(false));
+  $("projectDialogInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); closeProjectDialog(true); }
+    else if (event.key === "Escape") { event.preventDefault(); closeProjectDialog(false); }
+  });
+  document.addEventListener("click", (event) => {
+    if (event.target && event.target.closest && event.target.closest("#projectCtxMenu")) return;
+    closeProjectMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    closeProjectMenu();
+    if (!$("projectDialogMask").hidden) closeProjectDialog(false);
+  });
     if (!editorEnabled) {
       try { $("editModeBtn").hidden = true; $("saveBtn").hidden = true; } catch { }
     }
