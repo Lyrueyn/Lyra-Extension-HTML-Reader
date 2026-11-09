@@ -43,6 +43,7 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
     const allowed = ["lyra", "violet", "emerald", "sunset", "sakura", "light"];
     const theme = allowed.includes(id) ? id : "lyra";
     document.documentElement.dataset.readerTheme = theme;
+    try { sendEditor("theme", { theme: theme }); } catch { }
     try { localStorage.setItem("lyra-reader-theme", theme); } catch { }
   }
   try { applyReaderTheme(localStorage.getItem("lyra-reader-theme") || "lyra"); } catch { applyReaderTheme("lyra"); }
@@ -212,6 +213,7 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
       state.editorInited = false;
       // 编辑器会先发 ready；若 ready 丢包，1.2 秒后兜底 init。
       setTimeout(() => { if (!state.editorInited) sendEditorDocument(); }, 1200);
+      try { sendEditor("theme", { theme: document.documentElement.dataset.readerTheme || "lyra" }); } catch { }
     });
   }
 
@@ -1008,6 +1010,7 @@ async function initLegacy() {
     if (d.type === "ready") {
       state.editorReady = true;
       if (!state.editorInited) sendEditorDocument();
+      try { sendEditor("theme", { theme: document.documentElement.dataset.readerTheme || "lyra" }); } catch { }
       setStatus("编辑器已就绪", "ok");
     } else if (d.type === "loaded") {
       setStatus("编辑模式");
