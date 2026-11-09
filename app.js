@@ -3,10 +3,14 @@
 
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
   const params = new URLSearchParams(location.search);
+  const SHELL_MODE = params.get("shell") === "1" && window.parent !== window;
+  const shellPending = new Map();
+  let shellSeq = 1;
   const editorOrigin = params.get("extensionsOrigin") || "https://lyra-extensions.local";
   const bookAssetsOrigin = params.get("bookAssetsOrigin") || "";
 const editorEnabled = params.get("editorEnabled") !== "0";
 const startEdit = params.get("startEdit") === "1";
+if (SHELL_MODE) document.documentElement.dataset.shell = "1";
   const isFilePreview = location.protocol === "file:";
   const EDIT_CHANNEL = "lyra-editor";
 
@@ -76,7 +80,30 @@ const startEdit = params.get("startEdit") === "1";
     return bytesToBase64(new TextEncoder().encode(text || ""));
   }
 
+  function shellHostCall(type, payload) {
+    return new Promise((resolve, reject) => {
+      const requestId = "reader-shell-" + (shellSeq++) + "-" + Date.now();
+      shellPending.set(requestId, { resolve, reject });
+      window.parent.postMessage({ type: "shell-host-request", requestId: requestId, method: type, payload: payload || {} }, "*");
+      setTimeout(() => {
+        if (!shellPending.has(requestId)) return;
+        shellPending.delete(requestId);
+        reject(new Error("编辑器外壳响应超时"));
+      }, 20000);
+    });
+  }
+  window.addEventListener("message", (event) => {
+    const d = event.data || {};
+    if (d.type !== "shell-host-result") return;
+    const p = shellPending.get(d.requestId);
+    if (!p) return;
+    shellPending.delete(d.requestId);
+    if (d.ok === false) p.reject(new Error(d.error || "外壳操作失败"));
+    else p.resolve(d);
+  });
+
   function hostCall(type, payload) {
+    if (SHELL_MODE) return shellHostCall(type, payload);
     return new Promise((resolve, reject) => {
       if (!host) { reject(new Error("请从璃鸢镜扩展中打开 HTML 阅读器")); return; }
       const requestId = String(state.requestId++);

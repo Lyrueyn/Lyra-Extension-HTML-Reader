@@ -338,3 +338,5 @@ html[data-reader-theme] .project-dialog h3 { color: var(--text); }
 html[data-reader-theme] .project-dialog-message { color: var(--muted); }
 html[data-reader-theme] .project-dialog-input { background: var(--panel2); border-color: var(--line); color: var(--text); }
 html[data-reader-theme] .project-dialog-actions .primary { background: var(--accent); }
+
+html[data-shell="1"] #projectPanel, html[data-shell="1"] .project-panel { display: none !important; }
