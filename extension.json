@@ -1,7 +1,7 @@
 ﻿{
   "id": "html-reader",
   "name": "HTML 阅读器",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "entry": "index.html",
   "description": "HTML 项目阅读器：打开整个项目文件夹，不复制文件；浏览/编辑项目内 HTML。",
   "kind": "reader",
