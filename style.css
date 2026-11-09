@@ -347,3 +347,5 @@ html[data-shell="1"] #projectBtn { display: none !important; }
 html[data-shell="1"] .content .frame { left: 0 !important; width: 100% !important; }
 html[data-shell="1"] .read-progress { left: 10px !important; right: 10px !important; }
 html[data-shell="1"] body.project-tree-open .content .frame { left: 0 !important; width: 100% !important; }
+
+html[data-shell="1"] .brand { display: none !important; }

@@ -46,6 +46,11 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
     try { localStorage.setItem("lyra-reader-theme", theme); } catch { }
   }
   try { applyReaderTheme(localStorage.getItem("lyra-reader-theme") || "lyra"); } catch { applyReaderTheme("lyra"); }
+  window.addEventListener("message", (event) => {
+    if (!SHELL_MODE || event.source !== window.parent) return;
+    const d = event.data || {};
+    if (d.type === "theme") applyReaderTheme(d.theme || "lyra");
+  });
 
   function setStatus(text, tone) {
     const el = $("status");
