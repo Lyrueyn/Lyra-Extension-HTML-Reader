@@ -1,11 +1,14 @@
-﻿{
+{
   "id": "html-reader",
   "name": "HTML 阅读器",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "entry": "index.html",
   "description": "HTML 项目阅读器：打开整个项目文件夹，不复制文件；浏览/编辑项目内 HTML。",
   "kind": "reader",
-  "fileTypes": [".html", ".htm"],
+  "fileTypes": [
+    ".html",
+    ".htm"
+  ],
   "host": {
     "innerName": "document.html",
     "fileParam": "file",
@@ -14,7 +17,7 @@
   "library": {
     "sidebar": true,
     "navLabel": "HTML",
-    "glyph": "\uE8A5",
+    "glyph": "",
     "title": "HTML 阅读",
     "description": "导入项目选择项目文件夹；只记录路径，不复制文件。",
     "openLabel": "打开项目",

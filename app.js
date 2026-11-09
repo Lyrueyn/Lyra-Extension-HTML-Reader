@@ -6,6 +6,7 @@
   const editorOrigin = params.get("extensionsOrigin") || "https://lyra-extensions.local";
   const bookAssetsOrigin = params.get("bookAssetsOrigin") || "";
 const editorEnabled = params.get("editorEnabled") !== "0";
+const startEdit = params.get("startEdit") === "1";
   const isFilePreview = location.protocol === "file:";
   const EDIT_CHANNEL = "lyra-editor";
 
@@ -205,7 +206,7 @@ const editorEnabled = params.get("editorEnabled") !== "0";
   }
 
   function setMode(mode) {
-      if (editing && !editorEnabled) return;
+      if (mode === "edit" && !editorEnabled) return;
     if (mode === state.mode) return;
     state.mode = mode;
     const editing = mode === "edit";
@@ -643,6 +644,7 @@ async function openProjectHref(href) {
   const target = state.projectFiles.find((f) => f.rel === state.projectEntry) ||
     state.projectFiles.find((f) => f.isIndex) || state.projectFiles[0];
   await openProjectFile(target.rel);
+  if (startEdit && editorEnabled) setMode("edit");
   if (host) host.postMessage({ type: "host.ready" });
 }
 async function initLegacy() {
