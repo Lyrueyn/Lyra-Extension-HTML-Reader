@@ -870,7 +870,7 @@ async function refreshProjectFiles() {
     setStatus("文件树已刷新", "ok");
   } catch (e) { setStatus("刷新文件树失败：" + (e && e.message ? e.message : e), "error"); }
 }
-async function openProjectFile(rel) {
+async function openProjectFile(rel, skipRead) {
   if (state.dirty) await saveNow();
   const res = await hostCall("host.workspace.load", { path: rel });
   if (!res || !res.ok) throw new Error((res && res.error) || "读取项目文件失败");
@@ -999,7 +999,7 @@ async function initLegacy() {
     const frame = $("editFrame");
     if (!frame || event.source !== frame.contentWindow) return;
     const d = event.data || {};
-    if (d.type === "theme") { applyReaderTheme(d.theme || "lyra"); return; }
+    if (d.type === "theme") { if (!SHELL_MODE) applyReaderTheme(d.theme || "lyra", false); return; }
     if (d.channel !== EDIT_CHANNEL) return;
     if (d.type === "open-file") { openProjectHref(d.href); return; }
     if (d.type === "file-request") { handleEditorFileRequest(d); return; }
