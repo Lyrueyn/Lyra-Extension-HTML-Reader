@@ -340,3 +340,10 @@ html[data-reader-theme] .project-dialog-input { background: var(--panel2); borde
 html[data-reader-theme] .project-dialog-actions .primary { background: var(--accent); }
 
 html[data-shell="1"] #projectPanel, html[data-shell="1"] .project-panel { display: none !important; }
+
+
+/* Shell 模式：项目树由外壳提供，隐藏 HTML 自己的项目按钮，并让编辑/预览铺满 */
+html[data-shell="1"] #projectBtn { display: none !important; }
+html[data-shell="1"] .content .frame { left: 0 !important; width: 100% !important; }
+html[data-shell="1"] .read-progress { left: 10px !important; right: 10px !important; }
+html[data-shell="1"] body.project-tree-open .content .frame { left: 0 !important; width: 100% !important; }
