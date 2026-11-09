@@ -523,6 +523,17 @@ function expandProjectParents(rel) {
   const parts = String(rel || "").split("/");
   for (let i = 1; i < parts.length; i += 1) state.projectExpanded.add(parts.slice(0, i).join("/"));
 }
+async function openWithOtherEditor(rel) {
+  try {
+    setStatus("正在交给其他编辑器插件：" + rel, "ok");
+    const res = await hostCall("editor.open-file", { rel: rel });
+    if (!res || !res.ok) throw new Error((res && res.error) || "打开失败");
+    setStatus("已用 " + (res.plugin === "js-editor" ? "JavaScript 编辑器" : "其他编辑器") + " 打开：" + rel, "ok");
+  } catch (e) {
+    setStatus("跨编辑器打开失败：" + (e && e.message ? e.message : e), "error");
+  }
+}
+
 function renderProjectTree(node, container, depth) {
   const dirs = Array.from(node.dirs.values()).sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
   const files = node.files.slice().sort((a, b) => String(a.name || a.rel).localeCompare(String(b.name || b.rel), "zh-CN"));
@@ -558,10 +569,13 @@ function renderProjectTree(node, container, depth) {
     renderProjectTree(dir.node, children, depth + 1);
   }
   for (const file of files) {
-    const isHtml = file.html === true || /\\.html?$/i.test(String(file.rel || ""));
+    const isHtml = file.html === true || /\.html?$/i.test(String(file.rel || ""));
+    const isJs = /\.(m?js|cjs|jsx|tsx?|json)$/i.test(String(file.rel || ""));
+    const isCss = /\.css$/i.test(String(file.rel || ""));
+    const clickable = isHtml || isJs;
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "tree-row tree-file" + (file.rel === state.currentRel ? " active" : "") + (isHtml ? "" : " disabled");
+    row.className = "tree-row tree-file" + (file.rel === state.currentRel ? " active" : "") + (clickable || isCss ? "" : " disabled");
     row.style.paddingLeft = (6 + depth * 14) + "px";
     row.title = file.rel;
     row.dataset.kind = "file";
@@ -578,7 +592,9 @@ function renderProjectTree(node, container, depth) {
     name.textContent = file.name || String(file.rel || "").split("/").pop();
     row.append(spacer, icon, name);
     if (isHtml) row.addEventListener("click", () => { openProjectFile(file.rel).catch(showError); });
-    else row.addEventListener("click", () => setStatus("只支持打开 HTML 文件：" + file.rel, "error"));
+    else if (isJs) row.addEventListener("click", () => { openWithOtherEditor(file.rel).catch(showError); });
+    else if (isCss) row.addEventListener("click", () => setStatus("还没有安装 CSS 编辑器插件，暂时不能打开：" + file.rel, "error"));
+    else row.addEventListener("click", () => setStatus("没有适配这个文件类型的编辑器：" + file.rel, "error"));
     container.appendChild(row);
   }
 }
@@ -808,7 +824,7 @@ function renderProjectList() {
   renderProjectTree(root, list, 0);
 }
 function htmlProjectFiles() {
-  return state.projectFiles.filter((file) => file.html === true || /\\.html?$/i.test(String(file.rel || "")));
+  return state.projectFiles.filter((file) => file.html === true || /\.html?$/i.test(String(file.rel || "")));
 }
 async function refreshProjectFiles() {
   try {
