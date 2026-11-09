@@ -152,7 +152,7 @@
 
   function editorUrl() {
     if (isFilePreview) return "../Lyra-Extension-HTML-Editor/index.html?embedded=1&extensionsOrigin=" + encodeURIComponent(editorOrigin);
-    return editorOrigin + "/html-editor/index.html?embedded=1&v=298&extensionsOrigin=" + encodeURIComponent(editorOrigin);
+    return editorOrigin + "/html-editor/index.html?embedded=1&v=299&extensionsOrigin=" + encodeURIComponent(editorOrigin);
   }
   function editorTargetOrigin() {
     return isFilePreview ? "*" : editorOrigin;
@@ -611,7 +611,20 @@ async function openProjectFile(rel) {
     if (state.editorInited) sendEditorDocument();
   }
 }
-async function initProject() {
+async function openProjectHref(href) {
+  if (!state.projectMode || !href) return;
+  try {
+    const u = new URL(href, location.href);
+    const assets = bookAssetsOrigin ? new URL(bookAssetsOrigin) : null;
+    if (!assets || u.host !== assets.host) return;
+    const rel = decodeURIComponent(u.pathname).replace(/^\/+/, "");
+    if (!rel || !/\.html?$/i.test(rel)) return;
+    if (rel.toLowerCase() === state.currentRel.toLowerCase()) return;
+    const target = state.projectFiles.find((f) => String(f.rel || "").toLowerCase() === rel.toLowerCase());
+    if (!target) { setStatus("项目中没有这个页面：" + rel, "error"); return; }
+    await openProjectFile(target.rel);
+  } catch (e) { showError(e); }
+}async function initProject() {
   const info = await hostCall("host.project.list");
   if (!info || !info.ok) throw new Error((info && info.error) || "读取项目失败");
   state.projectName = info.name || state.projectName || "HTML 项目";
@@ -703,6 +716,7 @@ async function initLegacy() {
     const d = event.data || {};
     if (d.type === "theme") { applyReaderTheme(d.theme || "lyra"); return; }
     if (d.channel !== EDIT_CHANNEL) return;
+    if (d.type === "open-file") { openProjectHref(d.href); return; }
     if (d.type === "file-request") { handleEditorFileRequest(d); return; }
     if (d.type === "asset-request") {
       saveReaderAsset(d);
