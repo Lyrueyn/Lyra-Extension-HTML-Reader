@@ -29,6 +29,9 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
       projectName: params.get("projectName") || "",
       projectEntry: params.get("projectEntry") || "",
       projectFiles: [],
+      projectFilter: "",
+      projectSelected: new Set(),
+      projectDrag: null,
       projectDirs: [],
       projectRoot: "",
       currentRel: "",
@@ -631,14 +634,136 @@ async function openWithOtherEditor(rel) {
   }
 }
 
+function clearProjectDropMarks() {
+  document.querySelectorAll(".tree-row.drop-target").forEach((el) => el.classList.remove("drop-target"));
+  const list = $("projectList");
+  if (list) list.classList.remove("drop-root");
+}
+function projectDropDir(row) {
+  if (row && row.dataset && row.dataset.kind === "dir") return row.dataset.rel;
+  if (row && row.dataset && row.dataset.rel) return projectDirname(row.dataset.rel);
+  return "";
+}
+function bindProjectDragRow(row, kind, rel) {
+  row.draggable = true;
+  row.addEventListener("dragstart", (event) => {
+    if (event.target && event.target.closest && event.target.closest(".project-filter")) return;
+    state.projectDrag = { kind: kind, rel: rel };
+    try { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", rel); } catch { }
+  });
+  row.addEventListener("dragend", () => { state.projectDrag = null; clearProjectDropMarks(); });
+  row.addEventListener("dragover", (event) => {
+    const hasFiles = !!(event.dataTransfer && event.dataTransfer.types && Array.from(event.dataTransfer.types).includes("Files"));
+    if (!state.projectDrag && !hasFiles) return;
+    if (state.projectDrag && kind === "dir" && state.projectDrag.kind === "dir" && (rel === state.projectDrag.rel || rel.startsWith(state.projectDrag.rel + "/"))) return;
+    event.preventDefault();
+    event.stopPropagation();
+    clearProjectDropMarks();
+    row.classList.add("drop-target");
+  });
+  row.addEventListener("dragleave", () => row.classList.remove("drop-target"));
+  row.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    row.classList.remove("drop-target");
+    const dest = projectDropDir(row);
+    if (state.projectDrag) {
+      await moveProjectTarget(state.projectDrag, dest);
+      state.projectDrag = null;
+    } else if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length) {
+      await importProjectFiles(dest, event.dataTransfer.files);
+    }
+  });
+}
+async function moveProjectTarget(drag, destDir) {
+  if (!drag || !drag.rel) return;
+  const oldRel = String(drag.rel);
+  const name = projectBaseName(oldRel);
+  const nextDir = String(destDir || "");
+  if (drag.kind === "dir" && (nextDir === oldRel || nextDir.startsWith(oldRel + "/"))) throw new Error("不能把文件夹移动到它自己内部");
+  if (projectDirname(oldRel) === nextDir) return;
+  const toRel = projectJoin(nextDir, name);
+  const conflict = state.projectFiles.some((f) => String(f.rel || "").toLowerCase() === toRel.toLowerCase()) ||
+    state.projectDirs.some((d) => String(d).toLowerCase() === toRel.toLowerCase());
+  if (conflict) throw new Error("目标位置已存在：" + toRel);
+  if (state.dirty) await saveNow();
+  const res = await hostCall("host.file.rename", { from: oldRel, to: toRel });
+  if (!res || !res.ok) throw new Error((res && res.error) || "移动失败");
+  const affectsCurrent = state.currentRel === oldRel || state.currentRel.startsWith(oldRel + "/");
+  const nextCurrent = affectsCurrent ? toRel + state.currentRel.slice(oldRel.length) : state.currentRel;
+  await reloadProjectData();
+  if (affectsCurrent && nextCurrent) {
+    expandProjectParents(nextCurrent);
+    await openProjectFile(nextCurrent);
+  }
+  setStatus("已移动 " + oldRel + " → " + toRel, "ok");
+}
+async function importProjectFiles(dir, fileList) {
+  if (!fileList || !fileList.length) return;
+  const files = Array.from(fileList);
+  let imported = 0;
+  const failed = [];
+  for (const file of files) {
+    try {
+      let name = String(file.name || "").trim();
+      if (!name) continue;
+      name = validateProjectName(name);
+      const rel = projectJoin(dir || "", name);
+      const exists = state.projectFiles.some((f) => String(f.rel || "").toLowerCase() === rel.toLowerCase()) ||
+        state.projectDirs.some((d) => String(d).toLowerCase() === rel.toLowerCase());
+      if (exists) {
+        const ok = await projectConfirm("覆盖文件", "项目里已有 " + rel + "，要覆盖吗？");
+        if (!ok) continue;
+      }
+      const buffer = await file.arrayBuffer();
+      if (buffer.byteLength > 100 * 1024 * 1024) throw new Error("超过 100MB");
+      const data = bytesToBase64(new Uint8Array(buffer));
+      const res = await hostCall("host.file.save", { path: rel, data: data });
+      if (!res || !res.ok) throw new Error((res && res.error) || "导入失败");
+      imported += 1;
+    } catch (e) {
+      failed.push((file.name || "?") + "：" + (e && e.message ? e.message : e));
+    }
+  }
+  await reloadProjectData();
+  if (imported) setStatus("已导入 " + imported + " 个文件" + (failed.length ? "，失败 " + failed.length + " 个" : ""), failed.length ? "error" : "ok");
+  else if (failed.length) throw new Error(failed[0]);
+}
+function projectNodeMatches(node, query) {
+  if (!query) return true;
+  for (const file of node.files || []) {
+    if (String(file.name || file.rel || "").toLowerCase().includes(query)) return true;
+  }
+  for (const dir of (node.dirs ? node.dirs.values() : [])) {
+    if (dir.name.toLowerCase().includes(query) || projectNodeMatches(dir.node, query)) return true;
+  }
+  return false;
+}
+function projectRowSelected(rel) {
+  return state.projectSelected && state.projectSelected.has(rel);
+}
+function toggleProjectSelection(rel, event) {
+  if (!state.projectSelected) state.projectSelected = new Set();
+  if (event && (event.ctrlKey || event.metaKey)) {
+    if (state.projectSelected.has(rel)) state.projectSelected.delete(rel);
+    else state.projectSelected.add(rel);
+  } else {
+    state.projectSelected.clear();
+    state.projectSelected.add(rel);
+  }
+  renderProjectList();
+}
 function renderProjectTree(node, container, depth) {
   const dirs = Array.from(node.dirs.values()).sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
   const files = node.files.slice().sort((a, b) => String(a.name || a.rel).localeCompare(String(b.name || b.rel), "zh-CN"));
+  const query = String(state.projectFilter || "").trim().toLowerCase();
   for (const dir of dirs) {
-    const open = state.projectExpanded.has(dir.path);
+    if (query && !projectNodeMatches(dir.node, query) && !dir.name.toLowerCase().includes(query)) continue;
+    const open = query || state.projectExpanded.has(dir.path);
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "tree-row tree-dir" + (open ? " open" : "");
+    row.className = "tree-row tree-dir" + (open ? " open" : "") + (projectRowSelected(dir.path) ? " selected" : "");
+    row.draggable = true;
     row.style.paddingLeft = (6 + depth * 14) + "px";
     row.title = dir.path;
     row.dataset.kind = "dir";
@@ -657,22 +782,28 @@ function renderProjectTree(node, container, depth) {
     const children = document.createElement("div");
     children.className = "tree-children";
     children.hidden = !open;
-    row.addEventListener("click", () => {
+    row.addEventListener("click", (event) => {
+      if (event.ctrlKey || event.metaKey) { toggleProjectSelection(dir.path, event); return; }
+      if (state.projectSelected && state.projectSelected.size) { state.projectSelected.clear(); }
       if (state.projectExpanded.has(dir.path)) state.projectExpanded.delete(dir.path);
       else state.projectExpanded.add(dir.path);
       renderProjectList();
     });
+    bindProjectDragRow(row, "dir", dir.path, dir.path);
     container.append(row, children);
     renderProjectTree(dir.node, children, depth + 1);
   }
   for (const file of files) {
-    const isHtml = file.html === true || /\.html?$/i.test(String(file.rel || ""));
+    const rel = String(file.rel || "");
+    if (query && !String(file.name || rel).toLowerCase().includes(query)) continue;
+    const isHtml = file.html === true || /\.html?$/i.test(rel);
     const isJs = /\.(m?js|cjs|jsx|tsx?|json)$/i.test(String(file.rel || ""));
     const isCss = /\.css$/i.test(String(file.rel || ""));
     const clickable = isHtml || isJs;
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "tree-row tree-file" + (file.rel === state.currentRel ? " active" : "") + (clickable || isCss ? "" : " disabled");
+    row.className = "tree-row tree-file" + (file.rel === state.currentRel ? " active" : "") + (clickable || isCss ? "" : " disabled") + (projectRowSelected(rel) ? " selected" : "");
+    row.draggable = true;
     row.style.paddingLeft = (6 + depth * 14) + "px";
     row.title = file.rel;
     row.dataset.kind = "file";
@@ -688,10 +819,15 @@ function renderProjectTree(node, container, depth) {
     name.className = "tree-name";
     name.textContent = file.name || String(file.rel || "").split("/").pop();
     row.append(spacer, icon, name);
-    if (isHtml) row.addEventListener("click", () => { openProjectFile(file.rel).catch(showError); });
-    else if (isJs) row.addEventListener("click", () => { openWithOtherEditor(file.rel).catch(showError); });
-    else if (isCss) row.addEventListener("click", () => setStatus("还没有安装 CSS 编辑器插件，暂时不能打开：" + file.rel, "error"));
-    else row.addEventListener("click", () => setStatus("没有适配这个文件类型的编辑器：" + file.rel, "error"));
+    bindProjectDragRow(row, "file", rel, file.rel);
+    row.addEventListener("click", (event) => {
+      if (event.ctrlKey || event.metaKey) { toggleProjectSelection(rel, event); return; }
+      if (state.projectSelected && state.projectSelected.size) { state.projectSelected.clear(); }
+      if (isHtml) openProjectFile(file.rel).catch(showError);
+      else if (isJs) openWithOtherEditor(file.rel).catch(showError);
+      else if (isCss) setStatus("还没有安装 CSS 编辑器插件，暂时不能打开：" + file.rel, "error");
+      else setStatus("没有适配该文件类型的编辑器：" + file.rel, "error");
+    });
     container.appendChild(row);
   }
 }
@@ -774,6 +910,8 @@ function renderProjectTree(node, container, depth) {
     menu.innerHTML = "";
     projectMenuTarget = target || null;
     const isDir = target && target.kind === "dir";
+    const selectedRels = Array.from(state.projectSelected || []);
+    const multiSelected = !!(target && selectedRels.length > 1 && selectedRels.includes(target.rel));
     const baseDir = target ? (isDir ? target.rel : projectDirname(target.rel)) : (state.currentRel ? projectDirname(state.currentRel) : "");
     const add = (label, handler, danger) => {
       const btn = document.createElement("button");
@@ -794,8 +932,15 @@ function renderProjectTree(node, container, depth) {
       const sep = document.createElement("div");
       sep.className = "project-ctx-sep";
       menu.appendChild(sep);
-      add("重命名…", () => renameProjectTarget(target));
-      add("删除", () => deleteProjectTarget(target), true);
+      if (multiSelected) {
+        add("删除选中的 " + selectedRels.length + " 项", () => deleteProjectTargets(selectedRels), true);
+      } else {
+        add("重命名…", () => renameProjectTarget(target));
+        add("复制一份", () => duplicateProjectTarget(target));
+        add("复制相对路径", () => copyProjectPath(target.rel));
+        if (projectDirname(target.rel)) add("移动到根目录", () => moveProjectTarget(target, ""));
+        add("删除", () => deleteProjectTarget(target), true);
+      }
     }
     menu.hidden = false;
     menu.style.left = "0px";
@@ -803,6 +948,74 @@ function renderProjectTree(node, container, depth) {
     const rect = menu.getBoundingClientRect();
     menu.style.left = Math.max(6, Math.min(x, window.innerWidth - rect.width - 6)) + "px";
     menu.style.top = Math.max(6, Math.min(y, window.innerHeight - rect.height - 6)) + "px";
+  }
+
+  async function copyProjectPath(rel) {
+    try {
+      await navigator.clipboard.writeText(rel);
+      setStatus("已复制路径：" + rel, "ok");
+    } catch {
+      setStatus("复制路径失败：" + rel, "error");
+    }
+  }
+
+  async function duplicateProjectTarget(target) {
+    const rel = String(target.rel || "");
+    if (!rel) return;
+    const isDir = target.kind === "dir";
+    let name = await projectPrompt("复制一份", projectBaseName(rel), isDir ? "复制为文件夹名称" : "复制为文件名");
+    if (name == null) return;
+    name = validateProjectName(name);
+    const nextRel = projectJoin(projectDirname(rel), name);
+    const exists = state.projectFiles.some((f) => String(f.rel || "").toLowerCase() === nextRel.toLowerCase()) ||
+      state.projectDirs.some((d) => String(d).toLowerCase() === nextRel.toLowerCase());
+    if (exists) throw new Error("已存在：" + nextRel);
+    if (isDir) {
+      await hostCall("host.file.mkdir", { path: nextRel });
+      const prefix = rel + "/";
+      const members = state.projectFiles.filter((f) => String(f.rel || "").startsWith(prefix));
+      for (const file of members) {
+        const from = await hostCall("host.workspace.load", { path: file.rel });
+        if (!from || !from.ok) throw new Error((from && from.error) || ("读取失败：" + file.rel));
+        const to = nextRel + "/" + String(file.rel).slice(prefix.length);
+        const saved = await hostCall("host.file.save", { path: to, data: from.data });
+        if (!saved || !saved.ok) throw new Error((saved && saved.error) || ("写入失败：" + to));
+      }
+    } else {
+      const from = await hostCall("host.workspace.load", { path: rel });
+      if (!from || !from.ok) throw new Error((from && from.error) || ("读取失败：" + rel));
+      const saved = await hostCall("host.file.save", { path: nextRel, data: from.data });
+      if (!saved || !saved.ok) throw new Error((saved && saved.error) || ("写入失败：" + nextRel));
+    }
+    await reloadProjectData();
+    expandProjectParents(nextRel);
+    setStatus("已复制 " + rel + " → " + nextRel, "ok");
+  }
+
+  async function deleteProjectTargets(rels) {
+    if (!rels || !rels.length) return;
+    const ok = await projectConfirm("删除 " + rels.length + " 项", "确定删除选中的 " + rels.length + " 项吗？\n此操作不可撤销。");
+    if (!ok) return;
+    if (state.dirty) await saveNow();
+    const wasCurrent = state.currentRel && rels.some((rel) => state.currentRel === rel || state.currentRel.startsWith(rel + "/"));
+    for (const rel of rels.slice().sort((a, b) => b.length - a.length)) {
+      const res = await hostCall("host.file.delete", { path: rel });
+      if (!res || !res.ok) throw new Error((res && res.error) || ("删除失败：" + rel));
+    }
+    state.projectSelected.clear();
+    await reloadProjectData();
+    if (wasCurrent) {
+      const next = htmlProjectFiles()[0];
+      if (next) { expandProjectParents(next.rel); await openProjectFile(next.rel); }
+      else {
+        state.currentRel = "";
+        state.currentDir = "";
+        state.title = state.projectName || "HTML 项目";
+        state.html = "";
+        if (state.editorInited) sendEditorDocument();
+      }
+    }
+    setStatus("已删除 " + rels.length + " 项", "ok");
   }
 
   function newProjectFileContent(name) {
@@ -919,6 +1132,12 @@ function renderProjectList() {
   }
   const root = buildProjectTree();
   renderProjectTree(root, list, 0);
+  if (state.projectFilter && !list.querySelector(".tree-row")) {
+    const empty = document.createElement("div");
+    empty.className = "project-empty";
+    empty.textContent = "没有匹配的文件";
+    list.appendChild(empty);
+  }
 }
 function htmlProjectFiles() {
   return state.projectFiles.filter((file) => file.html === true || /\.html?$/i.test(String(file.rel || "")));
@@ -1116,6 +1335,56 @@ async function initLegacy() {
   $("projectRefreshBtn").addEventListener("click", () => refreshProjectFiles());
   $("projectNewFileBtn").addEventListener("click", () => createProjectFile(state.currentRel ? projectDirname(state.currentRel) : "").catch(showError));
   $("projectNewFolderBtn").addEventListener("click", () => createProjectFolder(state.currentRel ? projectDirname(state.currentRel) : "").catch(showError));
+  $("projectFilter").addEventListener("input", () => {
+    state.projectFilter = $("projectFilter").value || "";
+    renderProjectList();
+  });
+  $("projectFilterClear").addEventListener("click", () => {
+    $("projectFilter").value = "";
+    state.projectFilter = "";
+    renderProjectList();
+    $("projectFilter").focus();
+  });
+  $("projectList").addEventListener("dragover", (event) => {
+    if (!state.projectDrag && !(event.dataTransfer && event.dataTransfer.types && event.dataTransfer.types.includes("Files"))) return;
+    event.preventDefault();
+    $("projectList").classList.add("drop-root");
+  });
+  $("projectList").addEventListener("dragleave", (event) => {
+    if (event.relatedTarget && $("projectList").contains(event.relatedTarget)) return;
+    $("projectList").classList.remove("drop-root");
+  });
+  $("projectList").addEventListener("drop", async (event) => {
+    event.preventDefault();
+    $("projectList").classList.remove("drop-root");
+    if (state.projectDrag) {
+      try { await moveProjectTarget(state.projectDrag, ""); } catch (e) { showError(e); }
+      state.projectDrag = null;
+    } else if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length) {
+      try { await importProjectFiles("", event.dataTransfer.files); } catch (e) { showError(e); }
+    }
+  });
+  $("projectList").addEventListener("keydown", (event) => {
+    const selected = Array.from(state.projectSelected || []);
+    if (!selected.length) return;
+    if (event.key === "F2") {
+      event.preventDefault();
+      const rel = selected[0];
+      const isDir = state.projectDirs.some((d) => d === rel);
+      renameProjectTarget({ kind: isDir ? "dir" : "file", rel: rel, name: projectBaseName(rel) }).catch(showError);
+    } else if (event.key === "Delete") {
+      event.preventDefault();
+      deleteProjectTargets(selected).catch(showError);
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d") {
+      event.preventDefault();
+      const rel = selected[0];
+      const isDir = state.projectDirs.some((d) => d === rel);
+      duplicateProjectTarget({ kind: isDir ? "dir" : "file", rel: rel, name: projectBaseName(rel) }).catch(showError);
+    } else if (event.key === "Escape") {
+      state.projectSelected.clear();
+      renderProjectList();
+    }
+  });
   $("projectList").addEventListener("contextmenu", (event) => {
     if (!state.projectMode || state.mode !== "edit") return;
     event.preventDefault();
