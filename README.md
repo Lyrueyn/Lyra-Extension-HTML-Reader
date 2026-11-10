@@ -261,3 +261,7 @@ GNU GPL v3.0。
 ## 2.2.0
 
 - 转发 HTML 编辑器的 editor.validate-html 宿主请求（本地 vnu.jar 校验）。
+
+## 2.3.0
+
+- 阅读模式内部链接不再显示 lyra-book-assets.local，改为 data-lyra-href 点击打开项目文件。

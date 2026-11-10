@@ -127,7 +127,19 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
     });
   }
 
+  function rewriteReadAnchors(html) {
+    if (!bookAssetsOrigin) return html;
+    return String(html || "").replace(/<a\b([^>]*)>/gi, (tag, attrs) => {
+      const match = attrs.match(/\bhref\s*=\s*(["'])([^"']*)\1/i);
+      if (!match) return tag;
+      const href = match[2];
+      if (!href || href.charAt(0) === "#" || /^(?:https?:|mailto:|tel:|javascript:|data:)/i.test(href)) return tag;
+      return tag.replace(match[0], 'data-lyra-href="' + href.replace(/"/g, "&quot;") + '" href="#"');
+    });
+  }
+
   function withBookBase(html) {
+    html = rewriteReadAnchors(html);
     const imageCss = '<style>img, video, canvas, svg { max-width: 100%; min-width: 0; height: auto; }</style>';
     if (!bookAssetsOrigin) {
       if (/<head[\s>]/i.test(html)) return html.replace(/<head([^>]*)>/i, "<head$1>" + imageCss);
@@ -148,8 +160,28 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
   function renderRead() {
     const frame = $("readFrame");
     frame.srcdoc = wrapRead(state.html || "<p style='color:#888'>空 HTML 文件</p>");
-    frame.onload = () => { bindTocScroll(); updateReadProgress(); };
+    frame.onload = () => { bindTocScroll(); updateReadProgress(); bindReadLinks(); };
   }
+  function bindReadLinks() {
+    try {
+      const doc = $("readFrame").contentDocument;
+      if (!doc) return;
+      if (doc.__lyraLinksBound) return;
+      doc.__lyraLinksBound = true;
+      doc.addEventListener("click", (event) => {
+        const a = event.target && event.target.closest ? event.target.closest("a[data-lyra-href]") : null;
+        if (!a) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const raw = a.getAttribute("data-lyra-href") || "";
+        if (!raw) return;
+        let href = raw;
+        try { href = new URL(raw, state.baseHref || bookAssetsOrigin).href; } catch { }
+        openProjectHref(href);
+      }, true);
+    } catch { }
+  }
+
   function scheduleTocActive() {
     updateReadProgress();
     clearTimeout(state.tocScrollTimer);
