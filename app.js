@@ -15,6 +15,7 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
   const EDIT_CHANNEL = "lyra-editor";
 
   const state = {
+    readZoom: 1,
     html: "",
     title: params.get("name") || "未命名.html",
     path: "",
@@ -161,7 +162,7 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
   function renderRead() {
     const frame = $("readFrame");
     frame.srcdoc = wrapRead(state.html || "<p style='color:#888'>空 HTML 文件</p>");
-    frame.onload = () => { bindTocScroll(); updateReadProgress(); bindReadLinks(); };
+    frame.onload = () => { bindTocScroll(); updateReadProgress(); bindReadLinks(); bindReadZoom(); };
   }
   function bindReadLinks() {
     try {
@@ -184,6 +185,31 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
         try { href = new URL(raw, state.baseHref || bookAssetsOrigin).href; } catch { }
         openProjectHref(href);
       }, true);
+    } catch { }
+  }
+
+  function applyReadZoom() {
+    try {
+      const doc = $("readFrame").contentDocument;
+      if (doc && doc.documentElement) doc.documentElement.style.zoom = String(state.readZoom || 1);
+    } catch { }
+  }
+  function bindReadZoom() {
+    try {
+      const win = $("readFrame").contentWindow;
+      if (!win) return;
+      if (!win.__lyraZoomBound) {
+        win.__lyraZoomBound = true;
+        win.addEventListener("wheel", (event) => {
+          if (!event.ctrlKey) return;
+          event.preventDefault();
+          const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+          state.readZoom = Math.max(0.5, Math.min(3, (state.readZoom || 1) * factor));
+          applyReadZoom();
+          setStatus("正文缩放 " + Math.round(state.readZoom * 100) + "%", "ok");
+        }, { passive: false });
+      }
+      applyReadZoom();
     } catch { }
   }
 
