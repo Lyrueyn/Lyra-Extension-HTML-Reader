@@ -1003,6 +1003,17 @@ async function initLegacy() {
     if (d.channel !== EDIT_CHANNEL) return;
     if (d.type === "open-file") { openProjectHref(d.href); return; }
     if (d.type === "file-request") { handleEditorFileRequest(d); return; }
+    if (d.type === "host-request") {
+      (async () => {
+        try {
+          const result = await hostCall(d.method, d.payload || {});
+          sendEditor("host-result", Object.assign({ requestId: d.requestId }, result || {}));
+        } catch (e) {
+          sendEditor("host-result", { requestId: d.requestId, ok: false, error: e && e.message ? e.message : String(e) });
+        }
+      })();
+      return;
+    }
     if (d.type === "asset-request") {
       saveReaderAsset(d);
       return;

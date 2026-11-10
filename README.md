@@ -257,3 +257,7 @@ GNU GPL v3.0。
 
 - 修复外壳主题切换时与 HTML 编辑器互相回传导致的快速闪烁。
 - 开始编辑模式时跳过阅读 iframe 渲染，降低首次打开卡顿。
+
+## 2.2.0
+
+- 转发 HTML 编辑器的 editor.validate-html 宿主请求（本地 vnu.jar 校验）。
