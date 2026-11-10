@@ -265,3 +265,7 @@ GNU GPL v3.0。
 ## 2.3.0
 
 - 阅读模式内部链接不再显示 lyra-book-assets.local，改为 data-lyra-href 点击打开项目文件。
+
+## 2.3.1
+
+- 内部链接移除 href，只保留 data-lyra-href，状态栏不再显示内部域名。

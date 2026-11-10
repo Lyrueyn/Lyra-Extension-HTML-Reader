@@ -133,14 +133,15 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
       const match = attrs.match(/\bhref\s*=\s*(["'])([^"']*)\1/i);
       if (!match) return tag;
       const href = match[2];
-      if (!href || href.charAt(0) === "#" || /^(?:https?:|mailto:|tel:|javascript:|data:)/i.test(href)) return tag;
-      return tag.replace(match[0], 'data-lyra-href="' + href.replace(/"/g, "&quot;") + '" href="#"');
+      if (!href || /^(?:https?:|mailto:|tel:|javascript:|data:)/i.test(href)) return tag;
+      const rewritten = tag.replace(match[0], 'data-lyra-href="' + href.replace(/"/g, "&quot;") + '"');
+      return rewritten.replace(/^<a/i, '<a role="link" tabindex="0"');
     });
   }
 
   function withBookBase(html) {
     html = rewriteReadAnchors(html);
-    const imageCss = '<style>img, video, canvas, svg { max-width: 100%; min-width: 0; height: auto; }</style>';
+    const imageCss = '<style>img, video, canvas, svg { max-width: 100%; min-width: 0; height: auto; } a[data-lyra-href] { cursor: pointer; }</style>';
     if (!bookAssetsOrigin) {
       if (/<head[\s>]/i.test(html)) return html.replace(/<head([^>]*)>/i, "<head$1>" + imageCss);
       if (/<html[\s>]/i.test(html)) return html.replace(/<html([^>]*)>/i, "<html$1><head>" + imageCss + "</head>");
@@ -175,6 +176,10 @@ if (SHELL_MODE) document.documentElement.dataset.shell = "1";
         event.stopPropagation();
         const raw = a.getAttribute("data-lyra-href") || "";
         if (!raw) return;
+        if (raw.charAt(0) === "#") {
+          try { const target = doc.getElementById(raw.slice(1)); if (target) target.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { }
+          return;
+        }
         let href = raw;
         try { href = new URL(raw, state.baseHref || bookAssetsOrigin).href; } catch { }
         openProjectHref(href);
